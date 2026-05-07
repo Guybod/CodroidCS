@@ -27,6 +27,13 @@ namespace Codroid
         private const ushort CriMaskFixed = 0xFFFF;
         private const bool CriHighPrecisionFixed = true;
         private const int CriDurationMsFixed = 100;
+        private const int CriControlDurationMinMs = 1;
+        private const int CriControlDurationMaxMs = 16;
+        private const int CriControlStartBufferMin = 1;
+        private const int CriControlStartBufferMax = 100;
+        private const int CriControlFilterTypeRecommended = 1;
+        private const int CriControlDurationRecommendedMs = 4;
+        private const int CriControlStartBufferRecommended = 5;
 
         /// <summary>
         /// 每收到一帧合法长度的 CRI UDP 包并完成解析后触发；参数为当前数据的线程安全快照（克隆）。
@@ -76,21 +83,26 @@ namespace Codroid
         /// 与控制器建立 TCP 连接（地址为构造时传入的 IP，端口 9001）。
         /// </summary>
         /// <returns>表示异步连接操作的任务。</returns>
+        /// <exception cref="SocketException">TCP 连接失败，例如 IP 不可达、端口未开放或网络异常。</exception>
+        /// <exception cref="ObjectDisposedException">底层 TCP 客户端已释放。</exception>
         public async Task Connect()
         {
-            await _TcpClient.ConnectAsync(_ip, _port);
+            await _TcpClient.Connect(_ip, _port);
         }
 
         /// <summary>
-        /// 建立 TCP 后：先 <see cref="EnterRemoteModeViaAutoAsync"/>（自动→远程），再 <see cref="SwitchOn"/> 上电/使能。
+        /// 建立 TCP 后：先 <see cref="EnterRemoteModeViaAuto"/>（自动→远程），再 <see cref="SwitchOn"/> 上电/使能。
         /// 仅建立连接请用 <see cref="Connect"/>。
         /// </summary>
+        /// <returns>表示完整连接、切远程与上电流程完成的任务。</returns>
+        /// <exception cref="SocketException">TCP 连接失败。</exception>
+        /// <exception cref="InvalidOperationException">响应无法反序列化，或 TCP 状态异常。</exception>
         /// <exception cref="TimeoutException">某步指令等待超时。</exception>
         /// <exception cref="CodroidCommandException">控制器返回错误。</exception>
-        public async Task ConnectRemoteAndSwitchOnAsync()
+        public async Task ConnectRemoteAndSwitchOn()
         {
             await Connect();
-            await EnterRemoteModeViaAutoAsync();
+            await EnterRemoteModeViaAuto();
             await SwitchOn();
         }
 
@@ -102,7 +114,7 @@ namespace Codroid
         /// <param name="handler">自行解析 <see cref="PublishNotification.Db"/> 或 <see cref="PublishNotification.RawJson"/>；请勿长时间阻塞。</param>
         /// <param name="tcMilliseconds">协议字段 <c>tc</c>（毫秒）；默认 <c>100</c>。实际推送仍取决于数据是否变化。</param>
         /// <returns>释放以取消回调；<b>不会</b>向控制器发「退订」报文。TCP 断开后订阅与注册均失效，须重连后再次调用本方法。</returns>
-        public async Task<PublishTopicSubscription> SubscribePublishTopicAsync(
+        public async Task<PublishTopicSubscription> SubscribePublishTopic(
             string topicTy,
             Action<PublishNotification> handler,
             int tcMilliseconds = PublishSubscribeDefaults.TcMilliseconds)
@@ -113,12 +125,12 @@ namespace Codroid
             }
 
             ArgumentNullException.ThrowIfNull(handler);
-            await _TcpClient.RegisterPublishHandlerAndSubscribeAsync(topicTy, handler, tcMilliseconds);
+            await _TcpClient.RegisterPublishHandlerAndSubscribe(topicTy, handler, tcMilliseconds);
             return new PublishTopicSubscription(_TcpClient, topicTy, handler);
         }
 
         /// <summary>
-        /// 请求进入远程脚本模式（指令：<c>Robot/enterRemoteScriptMode</c>）。
+        /// 请求进入远程脚本模式（指令：<c>project/enterRemoteScriptMode</c>）。
         /// </summary>
         /// <returns>控制器返回的 <see cref="CommonResponse"/>（业务数据在 <see cref="CommonResponse.db"/>）。</returns>
         /// <exception cref="InvalidOperationException">尚未连接 TCP，或响应无法反序列化。</exception>
@@ -127,7 +139,66 @@ namespace Codroid
         public async Task<CommonResponse> EnterRemoteScriptMode()
         {
             int currentId = NextId();
-            return await _TcpClient.SendCommand(currentId, "Robot/enterRemoteScriptMode", new { });
+            return await _TcpClient.SendCommand(currentId, "project/enterRemoteScriptMode", new { });
+        }
+
+        /// <summary>
+        /// 直接下发脚本运行（指令：<c>project/runScript</c>）。
+        /// </summary>
+        /// <param name="mainScript">主程序脚本文本（scripts.main）。</param>
+        /// <param name="subThreads">可选：线程脚本映射（scripts.subThreads）。</param>
+        /// <param name="subPrograms">可选：子程序脚本映射（scripts.subPrograms）。</param>
+        /// <param name="interrupts">可选：中断脚本映射（scripts.interrupts）。</param>
+        /// <param name="vars">可选：脚本共享变量映射（db.vars）。</param>
+        /// <returns>控制器返回的响应对象；成功时通常仅包含 <c>id</c> 与 <c>ty</c>。</returns>
+        /// <exception cref="ArgumentException"><paramref name="mainScript"/> 为空或只包含空白字符。</exception>
+        /// <exception cref="InvalidOperationException">尚未连接 TCP，或响应无法反序列化。</exception>
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
+        public async Task<CommonResponse> RunScript(
+            string mainScript,
+            IReadOnlyDictionary<string, string>? subThreads = null,
+            IReadOnlyDictionary<string, string>? subPrograms = null,
+            IReadOnlyDictionary<string, string>? interrupts = null,
+            IReadOnlyDictionary<string, object>? vars = null)
+        {
+            if (string.IsNullOrWhiteSpace(mainScript))
+            {
+                throw new ArgumentException("mainScript 不能为空。", nameof(mainScript));
+            }
+
+            var scripts = new Dictionary<string, object>
+            {
+                ["main"] = mainScript
+            };
+
+            if (subThreads is { Count: > 0 })
+            {
+                scripts["subThreads"] = subThreads;
+            }
+
+            if (subPrograms is { Count: > 0 })
+            {
+                scripts["subPrograms"] = subPrograms;
+            }
+
+            if (interrupts is { Count: > 0 })
+            {
+                scripts["interrupts"] = interrupts;
+            }
+
+            var db = new Dictionary<string, object>
+            {
+                ["scripts"] = scripts
+            };
+
+            if (vars is { Count: > 0 })
+            {
+                db["vars"] = vars;
+            }
+
+            int currentId = NextId();
+            return await _TcpClient.SendCommand(currentId, "project/runScript", db);
         }
 
         /// <summary>
@@ -233,7 +304,7 @@ namespace Codroid
         /// <exception cref="InvalidOperationException">尚未连接 TCP，或响应无法反序列化。</exception>
         /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
         /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
-        public async Task<IReadOnlyDictionary<string, GlobalVarCatalogEntry>> GetGlobalVarsCatalogAsync()
+        public async Task<IReadOnlyDictionary<string, GlobalVarCatalogEntry>> GetGlobalVarsCatalog()
         {
             var resp = await GetGlobalVars();
             return GlobalVarCatalogParser.Parse(resp);
@@ -247,6 +318,9 @@ namespace Codroid
         /// <param name="remark">备注，可为中文；null 或空白则不发送 <c>nm</c>。</param>
         /// <returns>控制器响应。</returns>
         /// <exception cref="ArgumentException">变量名非法。</exception>
+        /// <exception cref="InvalidOperationException">尚未连接 TCP，或响应无法反序列化。</exception>
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
         public Task<CommonResponse> SaveGlobalVar(string name, object value, string? remark = null)
         {
             return SaveGlobalVars(new[] { new GlobalVarSaveItem(name, value, remark) });
@@ -257,7 +331,11 @@ namespace Codroid
         /// </summary>
         /// <param name="items">一项或多条保存说明；批次内变量名不得重复。</param>
         /// <returns>控制器响应。</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="items"/> 为 null。</exception>
         /// <exception cref="ArgumentException">项为空、变量名非法或批次内重名。</exception>
+        /// <exception cref="InvalidOperationException">尚未连接 TCP，或响应无法反序列化。</exception>
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
         public async Task<CommonResponse> SaveGlobalVars(IReadOnlyCollection<GlobalVarSaveItem> items)
         {
             ArgumentNullException.ThrowIfNull(items);
@@ -296,7 +374,11 @@ namespace Codroid
         /// </summary>
         /// <param name="names">要删除的变量名列表，每个名字须符合 <see cref="GlobalVarNaming.Validate"/>。</param>
         /// <returns>控制器响应。</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="names"/> 为 null。</exception>
         /// <exception cref="ArgumentException">列表为空或某变量名非法。</exception>
+        /// <exception cref="InvalidOperationException">尚未连接 TCP，或响应无法反序列化。</exception>
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
         public async Task<CommonResponse> RemoveGlobalVars(IEnumerable<string> names)
         {
             ArgumentNullException.ThrowIfNull(names);
@@ -337,79 +419,124 @@ namespace Codroid
         /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
         public async Task<CommonResponse> SwitchOff()
         {
-            return await SendCommandEmptyDbAsync("Robot/switchOff");
+            return await SendCommandEmptyDb("Robot/switchOff");
         }
 
         /// <summary>
-        /// 进入手动模式（指令：<c>Robot/toManual</c>）。需固件 2.3.2.6+；不能从远程模式直接跳入，须先经自动模式（见 <see cref="EnterManualModeViaAutoAsync"/>）。
+        /// 进入手动模式（指令：<c>Robot/toManual</c>）。需固件 2.3.2.6+；不能从远程模式直接跳入，须先经自动模式（见 <see cref="EnterManualModeViaAuto"/>）。
         /// </summary>
-        public Task<CommonResponse> ToManualAsync() => SendCommandEmptyDbAsync("Robot/toManual");
+        /// <returns>控制器返回的响应对象。</returns>
+        /// <exception cref="InvalidOperationException">尚未连接 TCP，或响应无法反序列化。</exception>
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
+        public Task<CommonResponse> ToManual() => SendCommandEmptyDb("Robot/toManual");
 
         /// <summary>
         /// 进入自动模式（指令：<c>Robot/toAuto</c>）。需固件 2.3.2.6+。
         /// </summary>
-        public Task<CommonResponse> ToAutoAsync() => SendCommandEmptyDbAsync("Robot/toAuto");
+        /// <returns>控制器返回的响应对象。</returns>
+        /// <exception cref="InvalidOperationException">尚未连接 TCP，或响应无法反序列化。</exception>
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
+        public Task<CommonResponse> ToAuto() => SendCommandEmptyDb("Robot/toAuto");
 
         /// <summary>
-        /// 进入远程模式（指令：<c>Robot/toRemote</c>）。需固件 2.3.2.6+；不能从手动模式直接跳入，须先经自动模式（见 <see cref="EnterRemoteModeViaAutoAsync"/>）。
+        /// 进入远程模式（指令：<c>Robot/toRemote</c>）。需固件 2.3.2.6+；不能从手动模式直接跳入，须先经自动模式（见 <see cref="EnterRemoteModeViaAuto"/>）。
         /// </summary>
-        public Task<CommonResponse> ToRemoteAsync() => SendCommandEmptyDbAsync("Robot/toRemote");
+        /// <returns>控制器返回的响应对象。</returns>
+        /// <exception cref="InvalidOperationException">尚未连接 TCP，或响应无法反序列化。</exception>
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
+        public Task<CommonResponse> ToRemote() => SendCommandEmptyDb("Robot/toRemote");
 
         /// <summary>
-        /// 先 <see cref="ToAutoAsync"/> 再 <see cref="ToManualAsync"/>，用于在远程与手动之间切换时满足控制器「必须先切自动」的限制。
+        /// 先 <see cref="ToAuto"/> 再 <see cref="ToManual"/>，用于在远程与手动之间切换时满足控制器「必须先切自动」的限制。
         /// </summary>
         /// <returns>最后一次（进入手动）请求的响应。</returns>
-        public async Task<CommonResponse> EnterManualModeViaAutoAsync()
+        /// <exception cref="InvalidOperationException">尚未连接 TCP，或响应无法反序列化。</exception>
+        /// <exception cref="TimeoutException">任一步等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">任一步控制器报错或其它执行失败。</exception>
+        public async Task<CommonResponse> EnterManualModeViaAuto()
         {
-            await ToAutoAsync();
-            return await ToManualAsync();
+            await ToAuto();
+            return await ToManual();
         }
 
         /// <summary>
-        /// 先 <see cref="ToAutoAsync"/> 再 <see cref="ToRemoteAsync"/>，用于在手动与远程之间切换时满足控制器「必须先切自动」的限制。
+        /// 先 <see cref="ToAuto"/> 再 <see cref="ToRemote"/>，用于在手动与远程之间切换时满足控制器「必须先切自动」的限制。
         /// </summary>
         /// <returns>最后一次（进入远程）请求的响应。</returns>
-        public async Task<CommonResponse> EnterRemoteModeViaAutoAsync()
+        /// <exception cref="InvalidOperationException">尚未连接 TCP，或响应无法反序列化。</exception>
+        /// <exception cref="TimeoutException">任一步等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">任一步控制器报错或其它执行失败。</exception>
+        public async Task<CommonResponse> EnterRemoteModeViaAuto()
         {
-            await ToAutoAsync();
-            return await ToRemoteAsync();
+            await ToAuto();
+            return await ToRemote();
         }
 
         /// <summary>
         /// 进入仿真模式（指令：<c>Robot/toSimulation</c>）。
         /// </summary>
-        public Task<CommonResponse> ToSimulationAsync() => SendCommandEmptyDbAsync("Robot/toSimulation");
+        /// <returns>控制器返回的响应对象。</returns>
+        /// <exception cref="InvalidOperationException">尚未连接 TCP，或响应无法反序列化。</exception>
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
+        public Task<CommonResponse> ToSimulation() => SendCommandEmptyDb("Robot/toSimulation");
 
         /// <summary>
         /// 进入实机模式（指令：<c>Robot/toActual</c>）。
         /// </summary>
-        public Task<CommonResponse> ToActualAsync() => SendCommandEmptyDbAsync("Robot/toActual");
+        /// <returns>控制器返回的响应对象。</returns>
+        /// <exception cref="InvalidOperationException">尚未连接 TCP，或响应无法反序列化。</exception>
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
+        public Task<CommonResponse> ToActual() => SendCommandEmptyDb("Robot/toActual");
 
         /// <summary>
         /// 进入拖拽模式（指令：<c>Robot/startDrag</c>）。需固件 2.3.2.6+；仅远程或手动模式下可用。
         /// </summary>
-        public Task<CommonResponse> StartDragAsync() => SendCommandEmptyDbAsync("Robot/startDrag");
+        /// <returns>控制器返回的响应对象。</returns>
+        /// <exception cref="InvalidOperationException">尚未连接 TCP，或响应无法反序列化。</exception>
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错、当前模式不允许拖拽或其它执行失败。</exception>
+        public Task<CommonResponse> StartDrag() => SendCommandEmptyDb("Robot/startDrag");
 
         /// <summary>
         /// 退出拖拽模式（指令：<c>Robot/stopDrag</c>）。需固件 2.3.2.6+。
         /// </summary>
-        public Task<CommonResponse> StopDragAsync() => SendCommandEmptyDbAsync("Robot/stopDrag");
+        /// <returns>控制器返回的响应对象。</returns>
+        /// <exception cref="InvalidOperationException">尚未连接 TCP，或响应无法反序列化。</exception>
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
+        public Task<CommonResponse> StopDrag() => SendCommandEmptyDb("Robot/stopDrag");
 
         /// <summary>
         /// 清除错误（指令：<c>System/clearError</c>）。
         /// </summary>
-        public Task<CommonResponse> ClearSystemErrorAsync() => SendCommandEmptyDbAsync("System/clearError");
+        /// <returns>控制器返回的响应对象。</returns>
+        /// <exception cref="InvalidOperationException">尚未连接 TCP，或响应无法反序列化。</exception>
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
+        public Task<CommonResponse> ClearSystemError() => SendCommandEmptyDb("System/clearError");
 
         /// <summary>
         /// 发送 <c>db</c> 为空字符串的 JSON 指令（与协议示例一致）。
         /// </summary>
-        private Task<CommonResponse> SendCommandEmptyDbAsync(string type) =>
+        private Task<CommonResponse> SendCommandEmptyDb(string type) =>
             _TcpClient.SendCommand(NextId(), type, string.Empty);
 
         /// <summary>
         /// 批量查询 IO 当前值（指令：<c>IOManager/GetIOValue</c>）；结果在 <see cref="CommonResponse.db"/> 数组中。
         /// </summary>
-        public async Task<CommonResponse> GetIoValuesAsync(IReadOnlyList<(string Type, int Port)> pins)
+        /// <param name="pins">要读取的 IO 列表，每项包含类型（<see cref="IoPortKind"/>）与端口号。</param>
+        /// <returns>控制器原始响应；读取值位于 <see cref="CommonResponse.db"/> 数组中。</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="pins"/> 为 null。</exception>
+        /// <exception cref="ArgumentException"><paramref name="pins"/> 为空，或包含非法 IO 类型。</exception>
+        /// <exception cref="InvalidOperationException">尚未连接 TCP，或响应无法反序列化。</exception>
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
+        public async Task<CommonResponse> GetIoValues(IReadOnlyList<(string Type, int Port)> pins)
         {
             var db = IoGetResponseParser.BuildGetQuery(pins);
             int currentId = NextId();
@@ -419,43 +546,70 @@ namespace Codroid
         /// <summary>
         /// 读取数字量输入 DI，返回 <c>0</c> 或 <c>1</c>。
         /// </summary>
-        public async Task<int> GetDiAsync(int port)
+        /// <param name="port">DI 端口号。</param>
+        /// <returns>端口当前值，固定为 <c>0</c> 或 <c>1</c>。</returns>
+        /// <exception cref="InvalidOperationException">响应中没有匹配端口，或 value 无法解析为数字量。</exception>
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
+        public async Task<int> GetDi(int port)
         {
-            var resp = await GetIoValuesAsync(new[] { (IoPortKind.Di, port) });
+            var resp = await GetIoValues(new[] { (IoPortKind.Di, port) });
             return IoGetResponseParser.ParseDigital(resp, IoPortKind.Di, port);
         }
 
         /// <summary>
         /// 读取数字量输出 DO 当前状态，返回 <c>0</c> 或 <c>1</c>。
         /// </summary>
-        public async Task<int> GetDoAsync(int port)
+        /// <param name="port">DO 端口号。</param>
+        /// <returns>端口当前值，固定为 <c>0</c> 或 <c>1</c>。</returns>
+        /// <exception cref="InvalidOperationException">响应中没有匹配端口，或 value 无法解析为数字量。</exception>
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
+        public async Task<int> GetDo(int port)
         {
-            var resp = await GetIoValuesAsync(new[] { (IoPortKind.Do, port) });
+            var resp = await GetIoValues(new[] { (IoPortKind.Do, port) });
             return IoGetResponseParser.ParseDigital(resp, IoPortKind.Do, port);
         }
 
         /// <summary>
         /// 读取模拟量输入 AI，返回浮点值。
         /// </summary>
-        public async Task<double> GetAiAsync(int port)
+        /// <param name="port">AI 端口号。</param>
+        /// <returns>端口当前模拟量值。</returns>
+        /// <exception cref="InvalidOperationException">响应中没有匹配端口，或 value 无法解析为浮点数。</exception>
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
+        public async Task<double> GetAi(int port)
         {
-            var resp = await GetIoValuesAsync(new[] { (IoPortKind.Ai, port) });
+            var resp = await GetIoValues(new[] { (IoPortKind.Ai, port) });
             return IoGetResponseParser.ParseAnalog(resp, IoPortKind.Ai, port);
         }
 
         /// <summary>
         /// 读取模拟量输出 AO 当前值，返回浮点值。
         /// </summary>
-        public async Task<double> GetAoAsync(int port)
+        /// <param name="port">AO 端口号。</param>
+        /// <returns>端口当前模拟量值。</returns>
+        /// <exception cref="InvalidOperationException">响应中没有匹配端口，或 value 无法解析为浮点数。</exception>
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
+        public async Task<double> GetAo(int port)
         {
-            var resp = await GetIoValuesAsync(new[] { (IoPortKind.Ao, port) });
+            var resp = await GetIoValues(new[] { (IoPortKind.Ao, port) });
             return IoGetResponseParser.ParseAnalog(resp, IoPortKind.Ao, port);
         }
 
         /// <summary>
         /// 写入数字量输出 DO（指令：<c>IOManager/SetIOValue</c>），<paramref name="value"/> 只能为 <c>0</c> 或 <c>1</c>。
         /// </summary>
-        public async Task<CommonResponse> SetDoAsync(int port, int value)
+        /// <param name="port">DO 端口号。</param>
+        /// <param name="value">目标值，只能为 <c>0</c> 或 <c>1</c>。</param>
+        /// <returns>控制器返回的响应对象。</returns>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="value"/> 不是 <c>0</c> 或 <c>1</c>。</exception>
+        /// <exception cref="InvalidOperationException">尚未连接 TCP，或响应无法反序列化。</exception>
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
+        public async Task<CommonResponse> SetDo(int port, int value)
         {
             if (value is not (0 or 1))
             {
@@ -470,7 +624,13 @@ namespace Codroid
         /// <summary>
         /// 写入模拟量输出 AO（指令：<c>IOManager/SetIOValue</c>）。
         /// </summary>
-        public async Task<CommonResponse> SetAoAsync(int port, double value)
+        /// <param name="port">AO 端口号。</param>
+        /// <param name="value">目标模拟量值。</param>
+        /// <returns>控制器返回的响应对象。</returns>
+        /// <exception cref="InvalidOperationException">尚未连接 TCP，或响应无法反序列化。</exception>
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
+        public async Task<CommonResponse> SetAo(int port, double value)
         {
             int currentId = NextId();
             var db = new { type = IoPortKind.Ao, port, value };
@@ -481,16 +641,29 @@ namespace Codroid
         /// 读取单个寄存器（指令：<c>RegisterManager/GetRegisterValue</c>）。
         /// 返回值使用 <see cref="RegisterReadValue.GetInt32"/> 或 <see cref="RegisterReadValue.GetDouble"/> 按实际类型读取。
         /// </summary>
-        public async Task<RegisterReadValue> GetRegisterValueAsync(int address)
+        /// <param name="address">寄存器地址。</param>
+        /// <returns>包含地址与原始 JSON 值的读取结果。</returns>
+        /// <exception cref="ArgumentException">地址列表为空（理论上不会由本方法触发）或响应地址与请求不一致。</exception>
+        /// <exception cref="InvalidOperationException">响应无法解析为寄存器列表。</exception>
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
+        public async Task<RegisterReadValue> GetRegisterValue(int address)
         {
-            IReadOnlyList<RegisterReadValue> batch = await GetRegisterValuesAsync(new[] { address });
+            IReadOnlyList<RegisterReadValue> batch = await GetRegisterValues(new[] { address });
             return batch[0];
         }
 
         /// <summary>
         /// 批量读取寄存器（指令：<c>RegisterManager/GetRegisterValue</c>）；返回数组顺序与 <paramref name="addresses"/> 一致。
         /// </summary>
-        public async Task<IReadOnlyList<RegisterReadValue>> GetRegisterValuesAsync(IReadOnlyList<int> addresses)
+        /// <param name="addresses">要读取的寄存器地址列表。</param>
+        /// <returns>与 <paramref name="addresses"/> 顺序一一对应的读取结果。</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="addresses"/> 为 null。</exception>
+        /// <exception cref="ArgumentException"><paramref name="addresses"/> 为空，或响应数量 / 地址与请求不一致。</exception>
+        /// <exception cref="InvalidOperationException">响应无法解析为寄存器列表。</exception>
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
+        public async Task<IReadOnlyList<RegisterReadValue>> GetRegisterValues(IReadOnlyList<int> addresses)
         {
             RegisterValidation.ValidateAddresses(addresses);
             int currentId = NextId();
@@ -502,7 +675,13 @@ namespace Codroid
         /// <summary>
         /// 写入寄存器整型值（指令：<c>RegisterManager/SetRegisterValue</c>）。
         /// </summary>
-        public async Task<CommonResponse> SetRegisterValueAsync(int address, int value)
+        /// <param name="address">寄存器地址。</param>
+        /// <param name="value">要写入的整型值。</param>
+        /// <returns>控制器返回的响应对象。</returns>
+        /// <exception cref="InvalidOperationException">尚未连接 TCP，或响应无法反序列化。</exception>
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
+        public async Task<CommonResponse> SetRegisterValue(int address, int value)
         {
             int currentId = NextId();
             var db = new { address, value };
@@ -512,7 +691,13 @@ namespace Codroid
         /// <summary>
         /// 写入寄存器浮点值（指令：<c>RegisterManager/SetRegisterValue</c>）。
         /// </summary>
-        public async Task<CommonResponse> SetRegisterValueAsync(int address, double value)
+        /// <param name="address">寄存器地址。</param>
+        /// <param name="value">要写入的浮点值。</param>
+        /// <returns>控制器返回的响应对象。</returns>
+        /// <exception cref="InvalidOperationException">尚未连接 TCP，或响应无法反序列化。</exception>
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
+        public async Task<CommonResponse> SetRegisterValue(int address, double value)
         {
             int currentId = NextId();
             var db = new { address, value };
@@ -522,7 +707,15 @@ namespace Codroid
         /// <summary>
         /// 设置扩展数组元素数据类型（指令：<c>RegisterManager/setExtendArrayType</c>）；<paramref name="index"/> 为 0~999，<paramref name="type"/> 见 <see cref="RegisterExtendArrayValueType"/>。
         /// </summary>
-        public async Task<CommonResponse> SetExtendArrayTypeAsync(int index, string type)
+        /// <param name="index">扩展数组索引，范围 0~999。</param>
+        /// <param name="type">元素类型，取值见 <see cref="RegisterExtendArrayValueType"/>。</param>
+        /// <returns>控制器返回的响应对象。</returns>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="index"/> 不在 0~999。</exception>
+        /// <exception cref="ArgumentException"><paramref name="type"/> 不是支持的扩展数组类型。</exception>
+        /// <exception cref="InvalidOperationException">尚未连接 TCP，或响应无法反序列化。</exception>
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
+        public async Task<CommonResponse> SetExtendArrayType(int index, string type)
         {
             RegisterValidation.ValidateExtendIndex(index);
             RegisterValidation.ValidateExtendType(type);
@@ -534,7 +727,13 @@ namespace Codroid
         /// <summary>
         /// 删除扩展数组指定索引并重置数据（指令：<c>RegisterManager/removeExtendArray</c>）；<paramref name="index"/> 为 0~999。
         /// </summary>
-        public async Task<CommonResponse> RemoveExtendArrayAsync(int index)
+        /// <param name="index">扩展数组索引，范围 0~999。</param>
+        /// <returns>控制器返回的响应对象。</returns>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="index"/> 不在 0~999。</exception>
+        /// <exception cref="InvalidOperationException">尚未连接 TCP，或响应无法反序列化。</exception>
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
+        public async Task<CommonResponse> RemoveExtendArray(int index)
         {
             RegisterValidation.ValidateExtendIndex(index);
             int currentId = NextId();
@@ -554,7 +753,7 @@ namespace Codroid
         /// <exception cref="InvalidOperationException">未连接等（见 <see cref="FutureTcpClient.SendCommand"/>）。</exception>
         /// <exception cref="TimeoutException">等待响应超时。</exception>
         /// <exception cref="CodroidCommandException">控制器报错。</exception>
-        public async Task<CommonResponse> AposToCposAsync(
+        public async Task<CommonResponse> AposToCpos(
             double[] jointDegrees,
             double[] userFrame,
             double[] toolFrame,
@@ -579,14 +778,22 @@ namespace Codroid
         /// <summary>
         /// 正解并解析 <c>db</c> 为六维笛卡尔位姿（单位：毫米、度，与控制器约定一致）。
         /// </summary>
+        /// <param name="jointDegrees">六轴关节角，单位：度。</param>
+        /// <param name="userFrame">用户坐标系 [x,y,z,rx,ry,rz]，单位：毫米、度。</param>
+        /// <param name="toolFrame">工具坐标系 [x,y,z,rx,ry,rz]，单位：毫米、度。</param>
+        /// <param name="externalAxisPositions">附加轴位置；无附加轴时传 null 或空数组。</param>
+        /// <returns>六维笛卡尔位姿 [x,y,z,rx,ry,rz]，单位：毫米、度。</returns>
+        /// <exception cref="ArgumentException">任一必需向量长度不是 6。</exception>
         /// <exception cref="InvalidOperationException"><c>db</c> 无法解析为 6 维数组。</exception>
-        public async Task<double[]> AposToCposPoseAsync(
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
+        public async Task<double[]> AposToCposPose(
             double[] jointDegrees,
             double[] userFrame,
             double[] toolFrame,
             double[]? externalAxisPositions = null)
         {
-            var resp = await AposToCposAsync(jointDegrees, userFrame, toolFrame, externalAxisPositions);
+            var resp = await AposToCpos(jointDegrees, userFrame, toolFrame, externalAxisPositions);
             return RobotKinematics.ParseDbAsVector6(resp.db);
         }
 
@@ -600,7 +807,7 @@ namespace Codroid
         /// <exception cref="ArgumentException">向量长度不是 6。</exception>
         /// <exception cref="TimeoutException">等待响应超时。</exception>
         /// <exception cref="CodroidCommandException">控制器报错。</exception>
-        public async Task<CommonResponse> CposToAposAsync(
+        public async Task<CommonResponse> CposToApos(
             double[] cartesianMmDeg,
             double[] referenceJointDegrees,
             double[]? externalAxisPositions = null)
@@ -622,13 +829,20 @@ namespace Codroid
         /// <summary>
         /// 逆解并解析 <c>db</c> 为六轴关节角（度）。若控制器返回空数组则抛异常，请调整 <paramref name="referenceJointDegrees"/>。
         /// </summary>
+        /// <param name="cartesianMmDeg">末端位姿 [x,y,z,rx,ry,rz]，线位移毫米、姿态度。</param>
+        /// <param name="referenceJointDegrees">参考关节角（度）；无解时可尝试修改该组角。</param>
+        /// <param name="externalAxisPositions">可选附加轴 <c>ep</c>；无则 null 或空数组。</param>
+        /// <returns>六轴关节角，单位：度。</returns>
+        /// <exception cref="ArgumentException">任一必需向量长度不是 6。</exception>
         /// <exception cref="InvalidOperationException">返回空数组或无法解析。</exception>
-        public async Task<double[]> CposToAposJointsAsync(
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
+        public async Task<double[]> CposToAposJoints(
             double[] cartesianMmDeg,
             double[] referenceJointDegrees,
             double[]? externalAxisPositions = null)
         {
-            var resp = await CposToAposAsync(cartesianMmDeg, referenceJointDegrees, externalAxisPositions);
+            var resp = await CposToApos(cartesianMmDeg, referenceJointDegrees, externalAxisPositions);
             return RobotKinematics.ParseDbAsVector6(resp.db);
         }
 
@@ -648,7 +862,7 @@ namespace Codroid
         /// <exception cref="ArgumentException">向量长度不是 6。</exception>
         /// <exception cref="TimeoutException">等待响应超时。</exception>
         /// <exception cref="CodroidCommandException">控制器报错。</exception>
-        public async Task<CommonResponse> CalculateRelativePoseAsync(
+        public async Task<CommonResponse> CalculateRelativePose(
             double[] tcpPoseWorld,
             double[] offset,
             RelativePoseCoorType coorType,
@@ -692,15 +906,24 @@ namespace Codroid
         /// <summary>
         /// 相对位姿计算并解析结果为六维位姿（毫米、度）。
         /// </summary>
+        /// <param name="tcpPoseWorld">当前末端 TCP 在世界系下的位姿 [x,y,z,a,b,c]，毫米与度。</param>
+        /// <param name="offset">偏移 [x,y,z,a,b,c]，毫米与度。</param>
+        /// <param name="coorType">在工具系或用户系下施加偏移。</param>
+        /// <param name="tcpPoseInPosCoorFrame">可选。当前末端在目标坐标系下的位姿。</param>
+        /// <param name="userCoorFrame">可选。用户坐标系定义；仅 <paramref name="coorType"/> 为 <see cref="RelativePoseCoorType.User"/> 时发送。</param>
+        /// <returns>偏移后的六维位姿，单位：毫米、度。</returns>
+        /// <exception cref="ArgumentException">任一提供的位姿 / 坐标系向量长度不是 6。</exception>
         /// <exception cref="InvalidOperationException"><c>db</c> 无法解析为 6 维数组。</exception>
-        public async Task<double[]> CalculateRelativePoseResultAsync(
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
+        public async Task<double[]> CalculateRelativePoseResult(
             double[] tcpPoseWorld,
             double[] offset,
             RelativePoseCoorType coorType,
             double[]? tcpPoseInPosCoorFrame = null,
             double[]? userCoorFrame = null)
         {
-            var resp = await CalculateRelativePoseAsync(
+            var resp = await CalculateRelativePose(
                 tcpPoseWorld,
                 offset,
                 coorType,
@@ -710,9 +933,16 @@ namespace Codroid
         }
 
         /// <summary>
-        /// 启动点动（指令：<c>Robot/jog</c>）。启动后须每约 <see cref="RobotMotionHeartbeat.RecommendedIntervalMilliseconds"/> ms 调用 <see cref="JogHeartbeatAsync"/>。
+        /// 启动点动（指令：<c>Robot/jog</c>）。启动后须每约 <see cref="RobotMotionHeartbeat.RecommendedIntervalMilliseconds"/> ms 调用 <see cref="JogHeartbeat"/>。
         /// </summary>
-        public async Task<CommonResponse> StartJogAsync(RobotJogParameters parameters)
+        /// <param name="parameters">点动参数，包含模式、速度、轴/方向索引、坐标系类型与坐标系 ID。</param>
+        /// <returns>控制器返回的响应对象。</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="parameters"/> 为 null。</exception>
+        /// <exception cref="ArgumentException">点动速度不在 -1~1，或其它参数不符合协议要求。</exception>
+        /// <exception cref="InvalidOperationException">尚未连接 TCP，或响应无法反序列化。</exception>
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
+        public async Task<CommonResponse> StartJog(RobotJogParameters parameters)
         {
             ArgumentNullException.ThrowIfNull(parameters);
             RobotMotionValidation.ValidateJog(parameters);
@@ -731,7 +961,11 @@ namespace Codroid
         /// <summary>
         /// 停止点动（指令：<c>Robot/stopJog</c>）。
         /// </summary>
-        public async Task<CommonResponse> StopJogAsync()
+        /// <returns>控制器返回的响应对象。</returns>
+        /// <exception cref="InvalidOperationException">尚未连接 TCP，或响应无法反序列化。</exception>
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
+        public async Task<CommonResponse> StopJog()
         {
             int currentId = NextId();
             return await _TcpClient.SendCommand(currentId, "Robot/stopJog", string.Empty);
@@ -740,7 +974,11 @@ namespace Codroid
         /// <summary>
         /// 点动心跳（指令：<c>Robot/jogHeartbeat</c>），维持点动状态。
         /// </summary>
-        public async Task<CommonResponse> JogHeartbeatAsync()
+        /// <returns>控制器返回的响应对象。</returns>
+        /// <exception cref="InvalidOperationException">尚未连接 TCP，或响应无法反序列化。</exception>
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
+        public async Task<CommonResponse> JogHeartbeat()
         {
             int currentId = NextId();
             return await _TcpClient.SendCommand(currentId, "Robot/jogHeartbeat", string.Empty);
@@ -748,9 +986,16 @@ namespace Codroid
 
         /// <summary>
         /// 运动到预设/规划位置（指令：<c>Robot/moveTo</c>）。类型为 <see cref="MoveToKind.JointPlanned"/> 或 <see cref="MoveToKind.LinePlanned"/> 时必须提供 <paramref name="target"/>。
-        /// 启动后须每约 <see cref="RobotMotionHeartbeat.RecommendedIntervalMilliseconds"/> ms 调用 <see cref="MoveToHeartbeatAsync"/>。
+        /// 启动后须每约 <see cref="RobotMotionHeartbeat.RecommendedIntervalMilliseconds"/> ms 调用 <see cref="MoveToHeartbeat"/>。
         /// </summary>
-        public async Task<CommonResponse> MoveToAsync(MoveToKind kind, MoveToTarget? target = null)
+        /// <param name="kind">moveTo 类型；不同值代表回零、回安全点、规划关节/直线等控制器内置行为。</param>
+        /// <param name="target">规划目标点；当 <paramref name="kind"/> 为 <see cref="MoveToKind.JointPlanned"/> 或 <see cref="MoveToKind.LinePlanned"/> 时必须提供，且至少包含 <c>cp</c>、<c>jp</c> 或 <c>ep</c> 之一。</param>
+        /// <returns>控制器返回的响应对象；仅表示请求被接收，运动完成需结合状态/心跳判断。</returns>
+        /// <exception cref="ArgumentException">需要目标点但未提供，或目标点不包含任何有效位置字段。</exception>
+        /// <exception cref="InvalidOperationException">尚未连接 TCP，或响应无法反序列化。</exception>
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
+        public async Task<CommonResponse> MoveTo(MoveToKind kind, MoveToTarget? target = null)
         {
             int currentId = NextId();
             object db;
@@ -797,7 +1042,11 @@ namespace Codroid
         /// <summary>
         /// moveTo 心跳（指令：<c>Robot/moveToHeartbeat</c>），维持 RunTo/moveTo 运动。
         /// </summary>
-        public async Task<CommonResponse> MoveToHeartbeatAsync()
+        /// <returns>控制器返回的响应对象。</returns>
+        /// <exception cref="InvalidOperationException">尚未连接 TCP，或响应无法反序列化。</exception>
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
+        public async Task<CommonResponse> MoveToHeartbeat()
         {
             int currentId = NextId();
             return await _TcpClient.SendCommand(currentId, "Robot/moveToHeartbeat", string.Empty);
@@ -806,7 +1055,13 @@ namespace Codroid
         /// <summary>
         /// 设置手动运动倍率（指令：<c>Robot/setManualMoveRate</c>），<paramref name="percent"/> 为 1~100。
         /// </summary>
-        public async Task<CommonResponse> SetManualMoveRateAsync(int percent)
+        /// <param name="percent">手动倍率百分比，范围 1~100。</param>
+        /// <returns>控制器返回的响应对象。</returns>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="percent"/> 不在 1~100。</exception>
+        /// <exception cref="InvalidOperationException">尚未连接 TCP，或响应无法反序列化。</exception>
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
+        public async Task<CommonResponse> SetManualMoveRate(int percent)
         {
             RobotMotionValidation.ValidateMoveRatePercent(percent);
             int currentId = NextId();
@@ -816,7 +1071,13 @@ namespace Codroid
         /// <summary>
         /// 设置自动运动倍率（指令：<c>Robot/setAutoMoveRate</c>），<paramref name="percent"/> 为 1~100。
         /// </summary>
-        public async Task<CommonResponse> SetAutoMoveRateAsync(int percent)
+        /// <param name="percent">自动倍率百分比，范围 1~100。</param>
+        /// <returns>控制器返回的响应对象。</returns>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="percent"/> 不在 1~100。</exception>
+        /// <exception cref="InvalidOperationException">尚未连接 TCP，或响应无法反序列化。</exception>
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
+        public async Task<CommonResponse> SetAutoMoveRate(int percent)
         {
             RobotMotionValidation.ValidateMoveRatePercent(percent);
             int currentId = NextId();
@@ -826,7 +1087,13 @@ namespace Codroid
         /// <summary>
         /// 设置碰撞检测灵敏度（指令：<c>Robot/setCollisionSensitivity</c>）。需固件 2.3.2.10+；<paramref name="sensitivity"/> 为 0~100；成功时响应 <c>db</c> 为布尔。
         /// </summary>
-        public async Task<CommonResponse> SetCollisionSensitivityAsync(int sensitivity)
+        /// <param name="sensitivity">碰撞检测灵敏度，范围 0~100。</param>
+        /// <returns>控制器返回的响应对象；协议成功示例中 <see cref="CommonResponse.db"/> 为布尔值。</returns>
+        /// <exception cref="ArgumentException"><paramref name="sensitivity"/> 不在 0~100。</exception>
+        /// <exception cref="InvalidOperationException">尚未连接 TCP，或响应无法反序列化。</exception>
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
+        public async Task<CommonResponse> SetCollisionSensitivity(int sensitivity)
         {
             RobotMotionValidation.ValidateCollisionSensitivity(sensitivity);
             int currentId = NextId();
@@ -836,7 +1103,13 @@ namespace Codroid
         /// <summary>
         /// 设置负载（指令：<c>Robot/setPayload</c>）。需固件 2.3.2.10+；<paramref name="payloadId"/> 为 0~15；成功时响应 <c>db</c> 可能为 null。
         /// </summary>
-        public async Task<CommonResponse> SetPayloadAsync(int payloadId)
+        /// <param name="payloadId">负载编号，范围 0~15。</param>
+        /// <returns>控制器返回的响应对象；协议成功示例中 <see cref="CommonResponse.db"/> 为 null。</returns>
+        /// <exception cref="ArgumentException"><paramref name="payloadId"/> 不在 0~15。</exception>
+        /// <exception cref="InvalidOperationException">尚未连接 TCP，或响应无法反序列化。</exception>
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
+        public async Task<CommonResponse> SetPayload(int payloadId)
         {
             RobotMotionValidation.ValidatePayloadId(payloadId);
             int currentId = NextId();
@@ -846,7 +1119,14 @@ namespace Codroid
         /// <summary>
         /// 下发运动指令列表（指令：<c>Robot/move</c>）。不要设置空的 <c>coor</c>/<c>tool</c> 数组。
         /// </summary>
-        public async Task<CommonResponse> MoveAsync(IReadOnlyList<MoveInstruction> instructions)
+        /// <param name="instructions">一条或多条运动指令；每条至少包含目标点，圆弧类还需中间点。</param>
+        /// <returns>控制器返回的响应对象；仅表示控制器接收指令，运动完成需另行观察状态。</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="instructions"/> 为 null。</exception>
+        /// <exception cref="ArgumentException">指令列表为空、目标点缺失或参数不符合运动类型要求。</exception>
+        /// <exception cref="InvalidOperationException">尚未连接 TCP，或响应无法反序列化。</exception>
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
+        public async Task<CommonResponse> Move(IReadOnlyList<MoveInstruction> instructions)
         {
             ArgumentNullException.ThrowIfNull(instructions);
             JsonElement payload = MotionCommandJson.SerializeMoveInstructions(instructions);
@@ -857,7 +1137,11 @@ namespace Codroid
         /// <summary>
         /// 暂停当前运动（指令：<c>Robot/pause</c>）；与工程级 <c>project/pause</c> 不同。
         /// </summary>
-        public async Task<CommonResponse> PauseRobotMotionAsync()
+        /// <returns>控制器返回的响应对象。</returns>
+        /// <exception cref="InvalidOperationException">尚未连接 TCP，或响应无法反序列化。</exception>
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
+        public async Task<CommonResponse> PauseRobotMotion()
         {
             int currentId = NextId();
             return await _TcpClient.SendCommand(currentId, "Robot/pause", string.Empty);
@@ -866,7 +1150,11 @@ namespace Codroid
         /// <summary>
         /// 恢复运动（指令：<c>Robot/resume</c>）。
         /// </summary>
-        public async Task<CommonResponse> ResumeRobotMotionAsync()
+        /// <returns>控制器返回的响应对象。</returns>
+        /// <exception cref="InvalidOperationException">尚未连接 TCP，或响应无法反序列化。</exception>
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
+        public async Task<CommonResponse> ResumeRobotMotion()
         {
             int currentId = NextId();
             return await _TcpClient.SendCommand(currentId, "Robot/resume", string.Empty);
@@ -875,7 +1163,11 @@ namespace Codroid
         /// <summary>
         /// 停止运动（指令：<c>Robot/stopMove</c>）。
         /// </summary>
-        public async Task<CommonResponse> StopRobotMoveAsync()
+        /// <returns>控制器返回的响应对象。</returns>
+        /// <exception cref="InvalidOperationException">尚未连接 TCP，或响应无法反序列化。</exception>
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
+        public async Task<CommonResponse> StopRobotMove()
         {
             int currentId = NextId();
             return await _TcpClient.SendCommand(currentId, "Robot/stopMove", string.Empty);
@@ -943,6 +1235,72 @@ namespace Codroid
             {
                 StopCriUdpListener();
             }
+        }
+
+        /// <summary>
+        /// 开启 CRI 实时控制（指令：<c>CRI/StartControl</c>）。
+        /// </summary>
+        /// <param name="filterType">滤波类型：0=关闭，1=平均滤波，2=二阶低通，3=椭圆滤波。推荐 1。</param>
+        /// <param name="durationMs">指令间隔（毫秒），范围 1~16，且须能整除 1000（如 1/2/4/5/8/10）。推荐 4。</param>
+        /// <param name="startBuffer">启动缓冲点数量，范围 1~100。推荐 5。</param>
+        /// <returns>控制器返回的响应对象。启动后应通过 <see cref="CriData"/> 等待 <see cref="CriRealTimeData.RealTimeControlMode"/> 变为 true 再下发 UDP 命令帧。</returns>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// <paramref name="filterType"/> 不在 0~3，或 <paramref name="durationMs"/> 不在 1~16 / 不能整除 1000，或 <paramref name="startBuffer"/> 不在 1~100。
+        /// </exception>
+        /// <exception cref="InvalidOperationException">尚未连接 TCP，或响应无法反序列化。</exception>
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
+        public async Task<CommonResponse> StartCriControl(
+            int filterType = CriControlFilterTypeRecommended,
+            int durationMs = CriControlDurationRecommendedMs,
+            int startBuffer = CriControlStartBufferRecommended)
+        {
+            if (filterType is < 0 or > 3)
+            {
+                throw new ArgumentOutOfRangeException(nameof(filterType), "filterType 仅支持 0~3。");
+            }
+
+            if (durationMs is < CriControlDurationMinMs or > CriControlDurationMaxMs)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(durationMs),
+                    $"durationMs 须在 {CriControlDurationMinMs}~{CriControlDurationMaxMs}（ms）。");
+            }
+            if (1000 % durationMs != 0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(durationMs),
+                    "durationMs 必须能整除 1000（建议值：1、2、4、5、8、10）。");
+            }
+
+            if (startBuffer is < CriControlStartBufferMin or > CriControlStartBufferMax)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(startBuffer),
+                    $"startBuffer 须在 {CriControlStartBufferMin}~{CriControlStartBufferMax}。");
+            }
+
+            int currentId = NextId();
+            var data = new
+            {
+                filterType,
+                duration = durationMs,
+                startBuffer
+            };
+            return await _TcpClient.SendCommand(currentId, "CRI/StartControl", data);
+        }
+
+        /// <summary>
+        /// 关闭 CRI 实时控制（指令：<c>CRI/StopControl</c>）。
+        /// </summary>
+        /// <returns>控制器返回的响应对象。</returns>
+        /// <exception cref="InvalidOperationException">尚未连接 TCP，或响应无法反序列化。</exception>
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
+        public async Task<CommonResponse> StopCriControl()
+        {
+            int currentId = NextId();
+            return await _TcpClient.SendCommand(currentId, "CRI/StopControl", string.Empty);
         }
 
         /// <summary>
@@ -1042,6 +1400,10 @@ namespace Codroid
         /// <summary>
         /// 停止 CRI UDP 监听并断开 TCP 连接。
         /// </summary>
+        /// <remarks>
+        /// 本方法不向控制器发送停止实时控制命令；若已开启 CRI 实时控制，请先显式调用 <see cref="StopCriControl"/>，
+        /// 并按需调用 <see cref="StopCriDataPush"/> 后再断开。
+        /// </remarks>
         public void Disconnect()
         {
             StopCriUdpListener();

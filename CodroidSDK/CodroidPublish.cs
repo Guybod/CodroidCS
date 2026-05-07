@@ -4,7 +4,7 @@ using System.Text.Json;
 namespace Codroid
 {
     /// <summary>
-    /// 主题订阅请求体中的 <c>tc</c>（毫秒）默认值；与 <see cref="CodroidClient.SubscribePublishTopicAsync"/> 的默认参数一致。
+    /// 主题订阅请求体中的 <c>tc</c>（毫秒）默认值；与 <see cref="CodroidClient.SubscribePublishTopic"/> 的默认参数一致。
     /// </summary>
     public static class PublishSubscribeDefaults
     {
@@ -28,7 +28,7 @@ namespace Codroid
     }
 
     /// <summary>
-    /// 文档 15.x 常见主题名称（<c>ty</c>），订阅时传入 <see cref="CodroidClient.SubscribePublishTopicAsync"/> 的主题字符串参数。
+    /// 文档 15.x 常见主题名称（<c>ty</c>），订阅时传入 <see cref="CodroidClient.SubscribePublishTopic"/> 的主题字符串参数。
     /// </summary>
     public static class PublishTopics
     {

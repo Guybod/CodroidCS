@@ -2,6 +2,10 @@
 
 Codroid 机器人控制器的 **C# SDK**：通过 TCP/UDP 与 JSON 协议与控制器通信，支持寄存器、IO、运动、CRI 实时数据等能力。
 
+## 单位说明
+
+现场与上层软件一般按 **毫米**、**度** 使用。TCP JSON 侧与 SDK 对外 API（含 **`CriRealTimeData`**）与此一致。**CRI UDP** 二进制载荷在线上为 **米**、**弧度**；`CriRealtimePacketParser` 已换算为毫米与度后再写入模型，请勿把原始 UDP 浮点当作毫米/度。多语言 SDK 应对齐同一换算，详见根目录 **`AGENTS.md`**。
+
 ## 环境要求
 
 - [.NET SDK](https://dotnet.microsoft.com/download)：**推荐安装 8.x**（示例程序 `CodroidTest` 面向 `net8.0`）。
@@ -15,6 +19,7 @@ Codroid 机器人控制器的 **C# SDK**：通过 TCP/UDP 与 JSON 协议与控�
 |-------------|------|
 | `CodroidSDK/` | SDK 类库（NuGet 包 id：`Codroidsdk`，构建时可生成 `.nupkg`） |
 | `CodroidTest/` | 控制台示例程序，演示各类 API 用法 |
+| `CodroidCRITest/` | CRI 实时控制示例程序，演示轨迹规划与 UDP CommandData 周期下发 |
 
 ## 构建 SDK
 
@@ -60,6 +65,96 @@ dotnet add package Codroidsdk
 ```
 
 在代码中加入 `using Codroid;` 即可使用 SDK 类型。
+
+## API 命名约定
+
+SDK 公共函数名不加 `Async` 后缀，即使返回类型是 `Task` / `Task<T>`。例如：
+
+- `ConnectRemoteAndSwitchOn()`
+- `GetIoValues(...)`
+- `SetRegisterValue(...)`
+- `Move(...)`
+- `StartCriControl(...)`
+- `CriRealtimeDispatcher.SendTrajectory(...)`
+
+这样做是为了让 C# / Python / C++ 三套 SDK 使用同一套公开函数名。调用方式仍然是 C# 标准异步调用：
+
+```csharp
+await robot.ConnectRemoteAndSwitchOn();
+```
+
+## 快速上手
+
+下面示例展示最常见流程：连接控制器、切远程、上电、读写 IO / 寄存器，最后断开。
+
+```csharp
+using Codroid;
+
+var robot = new CodroidClient("192.168.8.136");
+
+try
+{
+    await robot.ConnectRemoteAndSwitchOn();
+
+    int di0 = await robot.GetDi(0);
+    await robot.SetDo(10, di0);
+
+    RegisterReadValue reg = await robot.GetRegisterValue(49100);
+    int value = reg.GetInt32();
+    await robot.SetRegisterValue(49100, value + 1);
+}
+finally
+{
+    robot.Disconnect();
+}
+```
+
+所有 TCP 指令都会在控制器返回 `err` 时抛出 `CodroidCommandException`；10 秒内未收到对应 `id` 响应时抛出 `TimeoutException`。参数范围错误（例如 DO 只能写 0/1、CRI 控制周期必须整除 1000）会在 SDK 侧先抛 `ArgumentException` 或 `ArgumentOutOfRangeException`。
+
+## CRI 实时数据与实时控制
+
+实时数据推送：
+
+```csharp
+robot.CriDataReceived += data =>
+{
+    Console.WriteLine(string.Join(", ", data.JointPosition)); // 单位：度
+    Console.WriteLine(string.Join(", ", data.TcpPose));       // 单位：mm + 度
+};
+
+await robot.StartCriDataPush("192.168.8.150", 18888);
+```
+
+实时控制推荐流程：
+
+```csharp
+double[] start = robot.CriData.JointPosition;
+double[] target = [0, 0, 90, 0, 90, 0];
+
+var request = new TrajectoryRequest
+{
+    Space = TrajectorySpace.Joint,
+    Profile = TrajectoryProfile.Cubic,
+    FrequencyHz = 250,
+    Speed = 30
+};
+
+var trajectory = TrajectoryGenerator.Generate(start, target, request).ToList();
+
+await robot.StartCriControl(filterType: 1, durationMs: 4, startBuffer: 5);
+try
+{
+    using var dispatcher = new CriRealtimeDispatcher("192.168.8.136");
+    await dispatcher.SendTrajectory(trajectory, TrajectorySpace.Joint, periodMs: 4);
+}
+finally
+{
+    await robot.StopCriControl();
+    await robot.StopCriDataPush("192.168.8.150", 18888);
+}
+```
+
+CRI UDP 线上单位是 m/rad，SDK 对外统一使用 mm/deg；`CriRealtimeDispatcher` 默认会在发送前把 mm/deg 转回 m/rad。
 
 ## 仓库地址
 

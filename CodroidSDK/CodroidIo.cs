@@ -27,6 +27,11 @@ namespace Codroid
         /// <summary>
         /// 从响应数组中查找指定 DI/DO，将 <c>value</c> 规范为 <c>0</c> 或 <c>1</c>。
         /// </summary>
+        /// <param name="response">控制器对 <c>IOManager/GetIOValue</c> 的响应。</param>
+        /// <param name="ioType">IO 类型，通常为 <see cref="IoPortKind.Di"/> 或 <see cref="IoPortKind.Do"/>。</param>
+        /// <param name="port">端口号。</param>
+        /// <returns>数字量值，固定为 <c>0</c> 或 <c>1</c>。</returns>
+        /// <exception cref="InvalidOperationException">响应格式不是数组、找不到目标端口、缺少 value 字段，或 value 不能转换为 0/1。</exception>
         public static int ParseDigital(CommonResponse response, string ioType, int port)
         {
             foreach (var el in EnumerateItems(response))
@@ -50,6 +55,12 @@ namespace Codroid
         /// <summary>
         /// 从响应数组中查找指定 AI/AO，读取 <c>value</c> 为 <see cref="double"/>。
         /// </summary>
+        /// <param name="response">控制器对 <c>IOManager/GetIOValue</c> 的响应。</param>
+        /// <param name="ioType">IO 类型，通常为 <see cref="IoPortKind.Ai"/> 或 <see cref="IoPortKind.Ao"/>。</param>
+        /// <param name="port">端口号。</param>
+        /// <returns>模拟量浮点值。</returns>
+        /// <exception cref="FormatException">字符串 value 不是合法数字。</exception>
+        /// <exception cref="InvalidOperationException">响应格式不是数组、找不到目标端口、缺少 value 字段，或 value 不能转换为数字。</exception>
         public static double ParseAnalog(CommonResponse response, string ioType, int port)
         {
             foreach (var el in EnumerateItems(response))
@@ -78,6 +89,10 @@ namespace Codroid
         /// <summary>
         /// 构造 <c>GetIOValue</c> 请求体：对象数组，每项含 <c>type</c>、<c>port</c>。
         /// </summary>
+        /// <param name="pins">要查询的 IO 点列表。</param>
+        /// <returns>可直接作为 <c>db</c> 下发的 JSON 数组。</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="pins"/> 为 null。</exception>
+        /// <exception cref="ArgumentException"><paramref name="pins"/> 为空。</exception>
         public static JsonElement BuildGetQuery(IReadOnlyList<(string Type, int Port)> pins)
         {
             ArgumentNullException.ThrowIfNull(pins);

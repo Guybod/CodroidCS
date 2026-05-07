@@ -10,7 +10,7 @@ namespace Codroid
 {
     /// <summary>
     /// 基于 TCP 的异步 JSON 客户端：发送 { id, ty, db } 格式指令，按完整 JSON 对象匹配响应 id 并完成等待；
-    /// 无整数 <c>id</c> 的下行报文按 <c>ty</c> 分发给主题订阅回调（见 <see cref="RegisterPublishHandlerAndSubscribeAsync"/>）。
+    /// 无整数 <c>id</c> 的下行报文按 <c>ty</c> 分发给主题订阅回调（见 <see cref="RegisterPublishHandlerAndSubscribe"/>）。
     /// </summary>
     public class FutureTcpClient
     {
@@ -33,7 +33,10 @@ namespace Codroid
         /// <param name="ip">控制器 IP 地址或主机名。</param>
         /// <param name="port">控制器 TCP 端口。</param>
         /// <returns>表示连接操作完成的任务。</returns>
-        public async Task ConnectAsync(string ip, int port)
+        /// <exception cref="ArgumentNullException"><paramref name="ip"/> 为 null。</exception>
+        /// <exception cref="SocketException">连接失败、网络不可达或端口不可用。</exception>
+        /// <exception cref="ObjectDisposedException">底层 <see cref="TcpClient"/> 已释放。</exception>
+        public async Task Connect(string ip, int port)
         {
             await _client.ConnectAsync(ip, port);
             _stream = _client.GetStream();
@@ -54,7 +57,7 @@ namespace Codroid
         {
             if (_stream == null)
             {
-                throw new InvalidOperationException("未连接到服务器；请先调用 ConnectAsync 完成 TCP 连接。");
+                throw new InvalidOperationException("未连接到服务器；请先调用 Connect 完成 TCP 连接。");
             }
 
             var requestObj = new { id = id, ty = type, db = data };
@@ -139,7 +142,15 @@ namespace Codroid
         /// <param name="topicTy">主题名，与推送报文 <c>ty</c> 一致，例如 <c>publish/RobotStatus</c>。</param>
         /// <param name="handler">收到推送时在线程池触发；请勿阻塞。</param>
         /// <param name="tcMilliseconds">协议 <c>tc</c>（毫秒）；SDK 默认 <c>100</c>。</param>
-        public async Task RegisterPublishHandlerAndSubscribeAsync(
+        /// <returns>表示回调注册与首次订阅帧（如需要）发送完成的任务。</returns>
+        /// <exception cref="ArgumentException"><paramref name="topicTy"/> 为空。</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="handler"/> 为 null。</exception>
+        /// <exception cref="InvalidOperationException">尚未连接 TCP，无法发送订阅帧。</exception>
+        /// <exception cref="IOException">写入 TCP 流失败。</exception>
+        /// <remarks>
+        /// 本方法是传输层 API；用户侧通常调用 <see cref="CodroidClient.SubscribePublishTopic"/>，它会返回可释放订阅句柄。
+        /// </remarks>
+        public async Task RegisterPublishHandlerAndSubscribe(
             string topicTy,
             Action<PublishNotification> handler,
             int tcMilliseconds = PublishSubscribeDefaults.TcMilliseconds)
@@ -164,13 +175,18 @@ namespace Codroid
 
             if (_publishWireSent.TryAdd(topicTy, 0))
             {
-                await SendPublishSubscribeFrameAsync(topicTy, tcMilliseconds).ConfigureAwait(false);
+                await SendPublishSubscribeFrame(topicTy, tcMilliseconds).ConfigureAwait(false);
             }
         }
 
         /// <summary>
-        /// 移除由 <see cref="RegisterPublishHandlerAndSubscribeAsync"/> 注册的回调。
+        /// 移除由 <see cref="RegisterPublishHandlerAndSubscribe"/> 注册的回调。
         /// </summary>
+        /// <param name="topicTy">主题名。</param>
+        /// <param name="handler">要移除的回调实例，必须与注册时传入的是同一个委托。</param>
+        /// <exception cref="ArgumentException"><paramref name="topicTy"/> 为空。</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="handler"/> 为 null。</exception>
+        /// <remarks>仅移除本地回调，不向控制器发送退订报文。</remarks>
         public void RemovePublishHandler(string topicTy, Action<PublishNotification> handler)
         {
             if (string.IsNullOrEmpty(topicTy))
@@ -198,11 +214,11 @@ namespace Codroid
         /// <summary>
         /// 发送主题订阅帧：<c>{ "ty", "tc" }</c>（无 <c>id</c>、无 <c>db</c>）；推送仅在数据变化或首次订阅时出现。
         /// </summary>
-        private async Task SendPublishSubscribeFrameAsync(string topicTy, int tcMilliseconds)
+        private async Task SendPublishSubscribeFrame(string topicTy, int tcMilliseconds)
         {
             if (_stream == null)
             {
-                throw new InvalidOperationException("未连接到服务器；请先调用 ConnectAsync。");
+                throw new InvalidOperationException("未连接到服务器；请先调用 Connect。");
             }
 
             var frame = new { ty = topicTy, tc = tcMilliseconds };

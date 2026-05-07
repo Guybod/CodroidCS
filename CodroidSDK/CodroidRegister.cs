@@ -20,6 +20,9 @@ namespace Codroid
         /// <summary>
         /// 将 <see cref="Value"/> 读为 <see cref="double"/>（JSON 数字、布尔或数字字符串）。
         /// </summary>
+        /// <returns>转换后的浮点值；布尔值会转换为 1 或 0。</returns>
+        /// <exception cref="FormatException">字符串值不是合法数字。</exception>
+        /// <exception cref="InvalidOperationException"><see cref="Value"/> 的 JSON 类型无法转换为数字。</exception>
         public double GetDouble()
         {
             var v = Value;
@@ -36,6 +39,8 @@ namespace Codroid
         /// <summary>
         /// 将 <see cref="Value"/> 读为 <see cref="int"/>；若为小数或非数字则抛出。
         /// </summary>
+        /// <returns>转换后的 32 位整数。</returns>
+        /// <exception cref="InvalidOperationException"><see cref="Value"/> 不能无损表示为 <see cref="int"/>。</exception>
         public int GetInt32()
         {
             if (TryGetInt32(out var i))
@@ -50,6 +55,8 @@ namespace Codroid
         /// <summary>
         /// 尝试将值读为整型：JSON 整数、或可无损转为 <see cref="int"/> 的数字。
         /// </summary>
+        /// <param name="value">若转换成功，返回整数值；否则返回 0。</param>
+        /// <returns>成功转换为整型返回 true；否则返回 false。</returns>
         public bool TryGetInt32(out int value)
         {
             var v = Value;

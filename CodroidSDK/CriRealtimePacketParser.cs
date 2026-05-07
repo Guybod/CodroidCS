@@ -21,7 +21,8 @@ namespace Codroid
         private const double MToMm = 1000.0;
 
         /// <summary>
-        /// 将一帧固定布局的二进制 CRI 数据解析为 <see cref="CriRealTimeData"/>（关节角等为度，线位移为毫米等，见 <see cref="CriRealTimeData"/> 属性说明）。
+        /// 将一帧固定布局的二进制 CRI 数据解析为 <see cref="CriRealTimeData"/>。
+        /// UDP 载荷内关节量为<strong>弧度</strong>、线位移为<strong>米</strong>、姿态与角速度相关量为<strong>弧度</strong>（与控制器一致）；本方法转换为 <see cref="CriRealTimeData"/> 对外使用的<strong>度</strong>与<strong>毫米</strong>等（见该类注释）。
         /// </summary>
         /// <param name="packet">原始 UDP 载荷；长度必须等于 <see cref="PacketLength"/>。</param>
         /// <returns>填充完毕的实时数据对象。</returns>

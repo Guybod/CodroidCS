@@ -42,25 +42,25 @@ internal static class Program
         switch (mode)
         {
             case RunMode.AllTests:
-                await RunAllTestsAsync(robotIp, noClean);
+                await RunAllTests(robotIp, noClean);
                 return;
             case RunMode.CriDemo:
-                await RunCriDemoAsync(robotIp);
+                await RunCriDemo(robotIp);
                 return;
             case RunMode.KinematicsTest:
-                await RunKinematicsTestAsync(robotIp);
+                await RunKinematicsTest(robotIp);
                 return;
             case RunMode.S20MotionCriTest:
-                await RunS20MotionCriComboAsync(robotIp);
+                await RunS20MotionCriCombo(robotIp);
                 return;
             case RunMode.IoTest:
-                await RunIoTestAsync(robotIp);
+                await RunIoTest(robotIp);
                 return;
             case RunMode.RegisterTest:
-                await RunRegisterTestAsync(robotIp);
+                await RunRegisterTest(robotIp);
                 return;
             case RunMode.RobotStatusPublishDemo:
-                await RunRobotStatusPublishDemoAsync(robotIp);
+                await RunRobotStatusPublishDemo(robotIp);
                 return;
             default:
                 // 枚举齐全时不可达；若将来新增 RunMode 未补 switch，宁可失败也不要静默只跑全局变量。
@@ -83,7 +83,7 @@ internal static class Program
     /// <summary>
     /// 按顺序执行全部测试（每项内部会 Connect/Disconnect）。
     /// </summary>
-    private static async Task RunAllTestsAsync(string robotIp, bool noClean)
+    private static async Task RunAllTests(string robotIp, bool noClean)
     {
         PrintBanner("CodroidTest 完整测试套件", ConsoleColor.White);
         Console.WriteLine($"  控制器 IP: {robotIp}");
@@ -95,25 +95,25 @@ internal static class Program
 
         Console.WriteLine();
         PrintBanner("【1/7】全局变量", ConsoleColor.DarkYellow);
-        await RunGlobalVarTestAsync(robotIp, cleanUp: !noClean);
+        await RunGlobalVarTest(robotIp, cleanUp: !noClean);
 
         PrintBanner("【2/7】正逆解 / 相对位姿", ConsoleColor.DarkYellow);
-        await RunKinematicsTestAsync(robotIp);
+        await RunKinematicsTest(robotIp);
 
         PrintBanner("【3/7】IO（GetIOValue / SetIOValue）", ConsoleColor.DarkYellow);
-        await RunIoTestAsync(robotIp);
+        await RunIoTest(robotIp);
 
         PrintBanner("【4/7】寄存器（GetRegisterValue / SetRegisterValue）", ConsoleColor.DarkYellow);
-        await RunRegisterTestAsync(robotIp);
+        await RunRegisterTest(robotIp);
 
         PrintBanner("【5/7】TCP 主题 publish/RobotStatus（订阅 10 秒）", ConsoleColor.DarkYellow);
-        await RunRobotStatusPublishDemoAsync(robotIp, partOfFullSuite: true);
+        await RunRobotStatusPublishDemo(robotIp, partOfFullSuite: true);
 
         PrintBanner("【6/7】CRI 实时数据演示", ConsoleColor.DarkYellow);
-        await RunCriDemoAsync(robotIp);
+        await RunCriDemo(robotIp);
 
         PrintBanner("【7/7】S20-180-ECO_V2 运动 + CRI", ConsoleColor.DarkYellow);
-        await RunS20MotionCriComboAsync(robotIp);
+        await RunS20MotionCriCombo(robotIp);
 
         PrintBanner("CodroidTest 全部测试已执行完毕", ConsoleColor.Green);
     }
@@ -345,7 +345,7 @@ internal static class Program
     /// <summary>
     /// 测试机型 S20-180-ECO_V2：CRI 实时推送 + movJ 三段 + movL 连续四段；运动全程每 1s 打印关节/位姿/运动状态。
     /// </summary>
-    private static async Task RunS20MotionCriComboAsync(string robotIp)
+    private static async Task RunS20MotionCriCombo(string robotIp)
     {
         const string model = "S20-180-ECO_V2";
         var robot = new CodroidClient(robotIp);
@@ -364,7 +364,7 @@ internal static class Program
 
         try
         {
-            await robot.ConnectRemoteAndSwitchOnAsync();
+            await robot.ConnectRemoteAndSwitchOn();
             PrintOk("TCP 已连接，已切远程并上电。");
 
             await robot.StartCriDataPush(localUdpIp, localUdpPort);
@@ -391,7 +391,7 @@ internal static class Program
 
             double[] RjSnapshot() => (double[])robot.Data.JointPosition.Clone();
 
-            async Task WaitMotionSettledAsync(TimeSpan maxWait)
+            async Task WaitMotionSettled(TimeSpan maxWait)
             {
                 var sw = Stopwatch.StartNew();
                 await Task.Delay(300);
@@ -436,17 +436,17 @@ internal static class Program
             var j2 = new[] { 0.0, 0, 0, 0, 0, 0 };
             var j3 = new[] { 0.0, 0, 90, 0, 90, 0 };
 
-            await robot.MoveAsync(new[] { MovJ(j1) });
+            await robot.Move(new[] { MovJ(j1) });
             PrintOk("已下发 movJ → 目标1");
-            await WaitMotionSettledAsync(TimeSpan.FromMinutes(3));
+            await WaitMotionSettled(TimeSpan.FromMinutes(3));
 
-            await robot.MoveAsync(new[] { MovJ(j2) });
+            await robot.Move(new[] { MovJ(j2) });
             PrintOk("已下发 movJ → 目标2（全零）");
-            await WaitMotionSettledAsync(TimeSpan.FromMinutes(3));
+            await WaitMotionSettled(TimeSpan.FromMinutes(3));
 
-            await robot.MoveAsync(new[] { MovJ(j3) });
+            await robot.Move(new[] { MovJ(j3) });
             PrintOk("已下发 movJ → 目标3（回到 0,0,90,0,90,0）");
-            await WaitMotionSettledAsync(TimeSpan.FromMinutes(3));
+            await WaitMotionSettled(TimeSpan.FromMinutes(3));
 
             // --- movL 首段：文档起点仅作说明；指令只发目标点 P1 ---
             PrintMotionPhase(">>> 开始 movL 测试 — 单段直线到 P1（逆解参考角取自当前 CRI 关节）", ConsoleColor.Black, ConsoleColor.Cyan);
@@ -454,25 +454,25 @@ internal static class Program
 
             var p1 = new[] { 927.511, 214.489, 486.524, 179.999, 0.0, -89.999 };
             var rj0 = RjSnapshot();
-            await robot.MoveAsync(new[] { MovL(p1, rj0) });
+            await robot.Move(new[] { MovL(p1, rj0) });
             PrintOk("已下发 movL → P1");
-            await WaitMotionSettledAsync(TimeSpan.FromMinutes(3));
+            await WaitMotionSettled(TimeSpan.FromMinutes(3));
 
-            // --- 连续三段 movL（当前已在 P1，一次 MoveAsync：P2→P3→P4，段间过渡由控制器衔接）---
+            // --- 连续三段 movL（当前已在 P1，一次 Move：P2→P3→P4，段间过渡由控制器衔接）---
             PrintMotionPhase(">>> 开始连续路径 movL 测试 — 同一条 Move 指令内 3 段直线（P2→P3→P4，当前位姿在 P1）", ConsoleColor.Black, ConsoleColor.Magenta);
             var rjPath = RjSnapshot();
             var p2 = new[] { 927.516, -160.239, 486.534, 180.0, 0.0, -89.999 };
             var p3 = new[] { 927.515, -160.238, 1111.244, -179.999, 0.0, -89.999 };
             var p4 = new[] { 927.512, 351.971, 1111.249, -179.998, 0.0, -89.999 };
 
-            await robot.MoveAsync(new[]
+            await robot.Move(new[]
             {
                 MovL(p2, rjPath),
                 MovL(p3, rjPath),
                 MovL(p4, rjPath)
             });
             PrintOk("已下发连续 3 段 movL（P2→P3→P4）");
-            await WaitMotionSettledAsync(TimeSpan.FromMinutes(5));
+            await WaitMotionSettled(TimeSpan.FromMinutes(5));
 
             printCts.Cancel();
             if (printerTask != null)
@@ -521,7 +521,7 @@ internal static class Program
     /// <summary>
     /// 正解 / 逆解 / 相对位姿：使用文档示例数据调用 SDK，打印返回的六维向量。
     /// </summary>
-    private static async Task RunKinematicsTestAsync(string robotIp)
+    private static async Task RunKinematicsTest(string robotIp)
     {
         var client = new CodroidClient(robotIp);
 
@@ -532,12 +532,12 @@ internal static class Program
 
         try
         {
-            PrintStep(1, "TCP 连接 → 远程模式 → 上电（ConnectRemoteAndSwitchOnAsync）");
-            await client.ConnectRemoteAndSwitchOnAsync();
+            PrintStep(1, "TCP 连接 → 远程模式 → 上电（ConnectRemoteAndSwitchOn）");
+            await client.ConnectRemoteAndSwitchOn();
             PrintOk($"已连接 {robotIp}:9001，已切远程并上电。");
 
             // ----- 10.1 正解 Robot/apostocpos -----
-            PrintStep(2, "正解 AposToCposPoseAsync（Robot/apostocpos）");
+            PrintStep(2, "正解 AposToCposPose（Robot/apostocpos）");
             var jp = new[] { 0.0, 0.0, 90.0, 0.0, 90.0, 0.0 };
             var coor = new[] { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
             var tool = new[] { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
@@ -545,12 +545,12 @@ internal static class Program
             PrintVector6("输入 coor", coor, "mm, deg");
             PrintVector6("输入 tool", tool, "mm, deg");
 
-            var cpos = await client.AposToCposPoseAsync(jp, coor, tool, Array.Empty<double>());
+            var cpos = await client.AposToCposPose(jp, coor, tool, Array.Empty<double>());
             PrintVector6("输出 TCP 位姿 db", cpos, "mm, deg（文档示例为 [100,200,300,10,20,30]）");
             PrintOk("正解完成。");
 
             // ----- 10.2 逆解 Robot/cpostoapos -----
-            PrintStep(3, "逆解 CposToAposJointsAsync（Robot/cpostoapos）");
+            PrintStep(3, "逆解 CposToAposJoints（Robot/cpostoapos）");
             var cp = new[] { 927.503, 214.5, 898.998, 179.999, 0.0, -90.0 };
             var rj = new[] { 10.0, 20, 30, 40, 50, 60 };
             PrintVector6("输入 cp (末端)", cp, "mm, deg");
@@ -558,7 +558,7 @@ internal static class Program
 
             try
             {
-                var apos = await client.CposToAposJointsAsync(cp, rj, Array.Empty<double>());
+                var apos = await client.CposToAposJoints(cp, rj, Array.Empty<double>());
                 PrintVector6("输出关节角 db", apos, "度");
                 PrintOk("逆解完成。");
             }
@@ -569,7 +569,7 @@ internal static class Program
             }
 
             // ----- 10.3 相对位姿 Robot/calculateRelativePose -----
-            PrintStep(4, "相对位姿 CalculateRelativePoseResultAsync（Robot/calculateRelativePose）");
+            PrintStep(4, "相对位姿 CalculateRelativePoseResult（Robot/calculateRelativePose）");
             var pos = new[] { 927.503, 214.5, 898.998, 179.999, 0.0, -90.0 };
             var posCoor = new[] { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
             var offset = new[] { 0, 0, -300.0, 0, 0, 0 };
@@ -578,7 +578,7 @@ internal static class Program
             PrintVector6("输入 offset", offset, "mm, deg");
             Console.WriteLine("  coorType: tool");  
 
-            var rel = await client.CalculateRelativePoseResultAsync(
+            var rel = await client.CalculateRelativePoseResult(
                 pos,
                 offset,
                 RelativePoseCoorType.User,
@@ -617,9 +617,9 @@ internal static class Program
     }
 
     /// <summary>
-    /// IO 联调：批量 GetIoValuesAsync、单点 GetDi/Do/Ai/Ao；DO/AO 先读后写当前值，避免误改现场。
+    /// IO 联调：批量 GetIoValues、单点 GetDi/Do/Ai/Ao；DO/AO 先读后写当前值，避免误改现场。
     /// </summary>
-    private static async Task RunIoTestAsync(string robotIp)
+    private static async Task RunIoTest(string robotIp)
     {
         var client = new CodroidClient(robotIp);
         PrintBanner($"IO 测试（IOManager）| {robotIp}", ConsoleColor.White);
@@ -629,11 +629,11 @@ internal static class Program
 
         try
         {
-            await client.ConnectRemoteAndSwitchOnAsync();
+            await client.ConnectRemoteAndSwitchOn();
             PrintOk("已连接并远程 + 上电。");
 
-            PrintStep(1, "批量 GetIoValuesAsync（四个点）");
-            var batch = await client.GetIoValuesAsync(new List<(string Type, int Port)>
+            PrintStep(1, "批量 GetIoValues（四个点）");
+            var batch = await client.GetIoValues(new List<(string Type, int Port)>
             {
                 (IoPortKind.Di, 0),
                 (IoPortKind.Do, 10),
@@ -642,10 +642,10 @@ internal static class Program
             });
             Console.WriteLine("  db: " + batch.db.GetRawText());
 
-            PrintStep(2, "单点 GetDiAsync(0) / GetDoAsync(10) / GetAiAsync(1) / GetAoAsync(2)");
+            PrintStep(2, "单点 GetDi(0) / GetDo(10) / GetAi(1) / GetAo(2)");
             try
             {
-                var di0 = await client.GetDiAsync(0);
+                var di0 = await client.GetDi(0);
                 Console.WriteLine($"  DI0 = {di0}");
             }
             catch (Exception ex)
@@ -655,7 +655,7 @@ internal static class Program
 
             try
             {
-                var do10 = await client.GetDoAsync(10);
+                var do10 = await client.GetDo(10);
                 Console.WriteLine($"  DO10 = {do10}");
             }
             catch (Exception ex)
@@ -665,7 +665,7 @@ internal static class Program
 
             try
             {
-                var ai1 = await client.GetAiAsync(1);
+                var ai1 = await client.GetAi(1);
                 Console.WriteLine($"  AI1 = {ai1}");
             }
             catch (Exception ex)
@@ -675,7 +675,7 @@ internal static class Program
 
             try
             {
-                var ao2 = await client.GetAoAsync(2);
+                var ao2 = await client.GetAo(2);
                 Console.WriteLine($"  AO2 = {ao2}");
             }
             catch (Exception ex)
@@ -683,12 +683,12 @@ internal static class Program
                 PrintWarn("  AO2: " + ex.Message);
             }
 
-            PrintStep(3, "SetDoAsync / SetAoAsync（写回当前读值）");
+            PrintStep(3, "SetDo / SetAo（写回当前读值）");
             try
             {
-                var curDo = await client.GetDoAsync(10);
-                await client.SetDoAsync(10, curDo);
-                PrintOk($"SetDoAsync(10, {curDo}) 已执行。");
+                var curDo = await client.GetDo(10);
+                await client.SetDo(10, curDo);
+                PrintOk($"SetDo(10, {curDo}) 已执行。");
             }
             catch (Exception ex)
             {
@@ -697,9 +697,9 @@ internal static class Program
 
             try
             {
-                var curAo = await client.GetAoAsync(2);
-                await client.SetAoAsync(2, curAo);
-                PrintOk($"SetAoAsync(2, {curAo}) 已执行。");
+                var curAo = await client.GetAo(2);
+                await client.SetAo(2, curAo);
+                PrintOk($"SetAo(2, {curAo}) 已执行。");
             }
             catch (Exception ex)
             {
@@ -733,7 +733,7 @@ internal static class Program
     /// <summary>
     /// 寄存器联调：9032~9035 写 1/0；49100/49102/49104 整型 520；49300/49302/49304 浮点 520.52（中间地址按协议应为 49302）。
     /// </summary>
-    private static async Task RunRegisterTestAsync(string robotIp)
+    private static async Task RunRegisterTest(string robotIp)
     {
         var client = new CodroidClient(robotIp);
         PrintBanner($"寄存器测试（RegisterManager）| {robotIp}", ConsoleColor.White);
@@ -744,7 +744,7 @@ internal static class Program
 
         try
         {
-            await client.ConnectRemoteAndSwitchOnAsync();
+            await client.ConnectRemoteAndSwitchOn();
             PrintOk("已连接并远程 + 上电。");
 
             var range9032 = new[] { 9032, 9033, 9034, 9035 };
@@ -752,59 +752,59 @@ internal static class Program
             var floatRegs = new[] { 49300, 49302, 49304 };
 
             PrintBanner("区段 A：9032 ~ 9035", ConsoleColor.DarkCyan);
-            await RunRegisterSequenceAsync(
+            await RunRegisterSequence(
                 client,
                 range9032,
                 async () =>
                 {
                     foreach (var a in range9032)
                     {
-                        await client.SetRegisterValueAsync(a, 1);
+                        await client.SetRegisterValue(a, 1);
                     }
                 },
                 async () =>
                 {
                     foreach (var a in range9032)
                     {
-                        await client.SetRegisterValueAsync(a, 0);
+                        await client.SetRegisterValue(a, 0);
                     }
                 });
 
             PrintBanner("区段 B：49100 / 49102 / 49104（整型 520）", ConsoleColor.DarkCyan);
-            await RunRegisterSequenceAsync(
+            await RunRegisterSequence(
                 client,
                 intRegs,
                 async () =>
                 {
                     foreach (var a in intRegs)
                     {
-                        await client.SetRegisterValueAsync(a, 520);
+                        await client.SetRegisterValue(a, 520);
                     }
                 },
                 async () =>
                 {
                     foreach (var a in intRegs)
                     {
-                        await client.SetRegisterValueAsync(a, 0);
+                        await client.SetRegisterValue(a, 0);
                     }
                 });
 
             PrintBanner("区段 C：49300 / 49302 / 49304（浮点 520.52）", ConsoleColor.DarkCyan);
-            await RunRegisterSequenceAsync(
+            await RunRegisterSequence(
                 client,
                 floatRegs,
                 async () =>
                 {
                     foreach (var a in floatRegs)
                     {
-                        await client.SetRegisterValueAsync(a, 520.52);
+                        await client.SetRegisterValue(a, 520.52);
                     }
                 },
                 async () =>
                 {
                     foreach (var a in floatRegs)
                     {
-                        await client.SetRegisterValueAsync(a, 0.0);
+                        await client.SetRegisterValue(a, 0.0);
                     }
                 });
 
@@ -835,32 +835,32 @@ internal static class Program
     /// <summary>
     /// 单组寄存器：批量读 → 写入 → 逐个读 → 清零。
     /// </summary>
-    private static async Task RunRegisterSequenceAsync(
+    private static async Task RunRegisterSequence(
         CodroidClient client,
         IReadOnlyList<int> addresses,
-        Func<Task> writePayloadAsync,
-        Func<Task> writeClearAsync)
+        Func<Task> writePayload,
+        Func<Task> writeClear)
     {
-        PrintStep(1, $"批量 GetRegisterValuesAsync：{string.Join(", ", addresses)}");
-        var batch = await client.GetRegisterValuesAsync(addresses);
+        PrintStep(1, $"批量 GetRegisterValues：{string.Join(", ", addresses)}");
+        var batch = await client.GetRegisterValues(addresses);
         foreach (var x in batch)
         {
             Console.WriteLine($"  地址 {x.Address}: {FormatRegisterValue(x)}");
         }
 
-        PrintStep(2, "SetRegisterValueAsync（写入目标值）");
-        await writePayloadAsync();
+        PrintStep(2, "SetRegisterValue（写入目标值）");
+        await writePayload();
         PrintOk("写入完成。");
 
-        PrintStep(3, "逐个 GetRegisterValueAsync 回读");
+        PrintStep(3, "逐个 GetRegisterValue 回读");
         foreach (var a in addresses)
         {
-            var r = await client.GetRegisterValueAsync(a);
+            var r = await client.GetRegisterValue(a);
             Console.WriteLine($"  地址 {r.Address}: {FormatRegisterValue(r)}");
         }
 
-        PrintStep(4, "SetRegisterValueAsync（写回 0 / 0.0）");
-        await writeClearAsync();
+        PrintStep(4, "SetRegisterValue（写回 0 / 0.0）");
+        await writeClear();
         PrintOk("清零完成。");
     }
 
@@ -877,9 +877,9 @@ internal static class Program
     /// <summary>
     /// 仅订阅 <see cref="PublishTopics.RobotStatus"/>：TCP 连接 → 下发订阅帧 → 回调打印推送，10 秒后退出。
     /// </summary>
-    /// <param name="partOfFullSuite">为 true 时不重复打印本段大横幅（由 <see cref="RunAllTestsAsync"/> 已打印【n/7】）。</param>
+    /// <param name="partOfFullSuite">为 true 时不重复打印本段大横幅（由 <see cref="RunAllTests"/> 已打印【n/7】）。</param>
     /// <remarks>推送仅在状态变化或首次订阅时出现；静止时可能整条数为 0。</remarks>
-    private static async Task RunRobotStatusPublishDemoAsync(string robotIp, bool partOfFullSuite = false)
+    private static async Task RunRobotStatusPublishDemo(string robotIp, bool partOfFullSuite = false)
     {
         var client = new CodroidClient(robotIp);
         int pushCount = 0;
@@ -896,7 +896,7 @@ internal static class Program
             await client.Connect();
             PrintOk($"TCP 已连接 {robotIp}:9001。");
 
-            using var subscription = await client.SubscribePublishTopicAsync(
+            using var subscription = await client.SubscribePublishTopic(
                 PublishTopics.RobotStatus,
                 msg =>
                 {
@@ -947,7 +947,7 @@ internal static class Program
     /// <summary>
     /// 全局变量接口联调：getVars 快照 → saveVars 批量 → 单条覆盖 → removeVars 清理（可选）。
     /// </summary>
-    private static async Task RunGlobalVarTestAsync(string robotIp, bool cleanUp)
+    private static async Task RunGlobalVarTest(string robotIp, bool cleanUp)
     {
         var client = new CodroidClient(robotIp);
 
@@ -973,17 +973,17 @@ internal static class Program
         try
         {
             // ----- 连接 -----
-            PrintStep(1, "TCP → 远程 → 上电（ConnectRemoteAndSwitchOnAsync）");
-            await client.ConnectRemoteAndSwitchOnAsync();
+            PrintStep(1, "TCP → 远程 → 上电（ConnectRemoteAndSwitchOn）");
+            await client.ConnectRemoteAndSwitchOn();
             PrintOk($"已连接 {robotIp}:9001，已切远程并上电。");
 
-            // 局部函数：拉取并打印「解析后的」全局变量目录（GetGlobalVarsCatalogAsync）
-            async Task DumpCatalogAsync(string bannerTitle, int stepNo)
+            // 局部函数：拉取并打印「解析后的」全局变量目录（GetGlobalVarsCatalog）
+            async Task DumpCatalog(string bannerTitle, int stepNo)
             {
                 PrintStep(stepNo, bannerTitle);
-                PrintBanner("当前全局变量列表（GetGlobalVarsCatalogAsync）", ConsoleColor.DarkCyan);
+                PrintBanner("当前全局变量列表（GetGlobalVarsCatalog）", ConsoleColor.DarkCyan);
 
-                var map = await client.GetGlobalVarsCatalogAsync();
+                var map = await client.GetGlobalVarsCatalog();
                 if (map.Count == 0)
                 {
                     PrintWarn("字典为空：控制器未返回任何变量，或 db 不是对象。");
@@ -1004,7 +1004,7 @@ internal static class Program
                 }
             }
 
-            await DumpCatalogAsync("写入前：读取并打印全部全局变量", stepNo: 2);
+            await DumpCatalog("写入前：读取并打印全部全局变量", stepNo: 2);
 
             // ----- 批量保存 -----
             PrintStep(3, "批量增量保存（SaveGlobalVars → globalVar/saveVars）");
@@ -1020,14 +1020,14 @@ internal static class Program
             });
             PrintOk("saveVars 请求已成功完成（无异常即表示 TCP/协议层成功）。");
 
-            await DumpCatalogAsync("写入后：再次读取目录，确认出现 sdk_gv_* 项", stepNo: 4);
+            await DumpCatalog("写入后：再次读取目录，确认出现 sdk_gv_* 项", stepNo: 4);
 
             // ----- 单条覆盖 -----
             PrintStep(5, "单条保存覆盖（SaveGlobalVar → 把 sdk_gv_int 改为 200）");
             await client.SaveGlobalVar(testNames[0], 200, "SDK 测试：整数（已覆盖）");
             PrintOk("覆盖写入完成。");
 
-            await DumpCatalogAsync("覆盖后：确认 sdk_gv_int 的 val 已变化", stepNo: 6);
+            await DumpCatalog("覆盖后：确认 sdk_gv_int 的 val 已变化", stepNo: 6);
 
             // ----- 可选删除 -----
             if (cleanUp)
@@ -1037,7 +1037,7 @@ internal static class Program
                 await client.RemoveGlobalVars(testNames);
                 PrintOk("removeVars 已发送（删除不存在的名字也不会报错）。");
 
-                await DumpCatalogAsync("删除后：sdk_gv_* 应不再出现（若仍见，请核对控制器）", stepNo: 8);
+                await DumpCatalog("删除后：sdk_gv_* 应不再出现（若仍见，请核对控制器）", stepNo: 8);
             }
             else
             {
@@ -1078,7 +1078,7 @@ internal static class Program
     /// <summary>
     /// CRI：StartDataPush + 本机 UDP 收包，打印少量实时字段。
     /// </summary>
-    private static async Task RunCriDemoAsync(string robotIp)
+    private static async Task RunCriDemo(string robotIp)
     {
         var robot = new CodroidClient(robotIp);
 
@@ -1094,7 +1094,7 @@ internal static class Program
         try
         {
             PrintStep(1, "TCP 连接");
-            await robot.ConnectRemoteAndSwitchOnAsync();
+            await robot.ConnectRemoteAndSwitchOn();
             PrintOk("TCP 已连接，已切远程并上电。");
 
             PrintStep(2, $"请求 CRI 推送至本机 {localUdpIp}:{localUdpPort}");

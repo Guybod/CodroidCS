@@ -9,9 +9,14 @@
     <Version>1.0.0</Version>
     <Authors>bod</Authors>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <Description>Codroid 机器人控制器 C# SDK（TCP+UDP JSON，高精度实时数据）</Description>
     <RootNamespace>Codroidsdk</RootNamespace>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../README.md" Pack="true" PackagePath="/" />
+  </ItemGroup>
 
 </Project>

@@ -31,7 +31,8 @@ public class CommonResponse
 
 
 /// <summary>
-/// CRI 实时数据快照：由 UDP 二进制包解析得到，关节角类量为度，线位移为毫米（详见各属性说明）。
+/// CRI 实时数据快照：由 UDP 二进制包经 <see cref="CriRealtimePacketParser"/> 解析得到；
+/// 控制器线上数据为弧度与米，解析后本类型对外字段为关节类量度、线位移毫米等（详见各属性说明）。
 /// </summary>
 public class CriRealTimeData
 {
@@ -108,8 +109,10 @@ public class CriRealTimeData
     /// 用另一快照覆盖当前实例的所有字段（数组为深拷贝引用新数组）。
     /// </summary>
     /// <param name="source">作为数据源的实时数据对象，不可为 null。</param>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> 为 null。</exception>
     public void UpdateFrom(CriRealTimeData source)
     {
+        ArgumentNullException.ThrowIfNull(source);
         TimestampMs = source.TimestampMs;
         Status1Raw = source.Status1Raw;
         Status2Raw = source.Status2Raw;
