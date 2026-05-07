@@ -1,0 +1,29 @@
+# MSBuild
+bin/
+obj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.csproj.user
+
+# Rider
+.idea/
+
+# VS Code / Cursor（本地调试与任务，不入库）
+.vscode/
+
+# 本地测试结果 / `dotnet pack` 产物
+TestResults/
+artifacts/
+*.nupkg
+*.snupkg
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 本地密钥
+.env
