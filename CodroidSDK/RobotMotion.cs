@@ -68,12 +68,29 @@ namespace Codroid
 
     /// <summary>
     /// <c>moveTo</c> 中 <c>target</c>；仅在 <see cref="MoveToKind.JointPlanned"/> 或 <see cref="MoveToKind.LinePlanned"/> 时使用。
+    /// 请通过 <see cref="Joint"/> / <see cref="Cartesian"/> 构造。
     /// </summary>
     public sealed class MoveToTarget
     {
         public double[]? Cp { get; init; }
         public double[]? Jp { get; init; }
         public double[]? Ep { get; init; }
+
+        /// <summary>规划关节目标（<c>target.jp</c>）。</summary>
+        public static MoveToTarget Joint(JointPoint joint)
+        {
+            ArgumentNullException.ThrowIfNull(joint);
+            MotionPointValidation.ValidateSix(nameof(joint.Jp), joint.Jp);
+            return new MoveToTarget { Jp = joint.Jp };
+        }
+
+        /// <summary>规划笛卡尔目标（<c>target.cp</c>）。</summary>
+        public static MoveToTarget Cartesian(CartesianPoint cartesian)
+        {
+            ArgumentNullException.ThrowIfNull(cartesian);
+            MotionPointValidation.ValidateSix(nameof(cartesian.Cp), cartesian.Cp);
+            return new MoveToTarget { Cp = cartesian.Cp };
+        }
     }
 
     /// <summary>
@@ -96,9 +113,10 @@ namespace Codroid
     }
 
     /// <summary>
-    /// <c>Robot/move</c> 单条指令中的 <c>targetPoint</c> / <c>middlePoint</c>。
+    /// <c>Robot/move</c> 单条指令中的 <c>targetPoint</c> / <c>middlePoint</c>（协议 DTO）。
+    /// 请通过 <see cref="FromJoint"/> / <see cref="FromCartesian"/> 构造，下发前由 <see cref="MotionPointPacker"/> 打包。
     /// </summary>
-    public sealed class MoveTargetPoint
+    public sealed class MovePoint
     {
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public double[]? Jp { get; init; }
@@ -111,6 +129,31 @@ namespace Codroid
 
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public double[]? Ep { get; init; }
+
+        /// <summary>关节路点，仅设置 <c>jp</c>。</summary>
+        public static MovePoint FromJoint(JointPoint joint)
+        {
+            ArgumentNullException.ThrowIfNull(joint);
+            MotionPointValidation.ValidateSix(nameof(joint.Jp), joint.Jp);
+            return new MovePoint { Jp = joint.Jp };
+        }
+
+        /// <summary>笛卡尔路点，设置 <c>cp</c> 与可选 <c>rj</c>（打包时 <c>rj</c> 空则用默认）。</summary>
+        public static MovePoint FromCartesian(CartesianPoint cartesian)
+        {
+            ArgumentNullException.ThrowIfNull(cartesian);
+            MotionPointValidation.ValidateSix(nameof(cartesian.Cp), cartesian.Cp);
+            if (cartesian.Rj != null)
+            {
+                MotionPointValidation.ValidateSix(nameof(cartesian.Rj), cartesian.Rj);
+            }
+
+            return new MovePoint
+            {
+                Cp = cartesian.Cp,
+                Rj = cartesian.Rj
+            };
+        }
     }
 
     /// <summary>
@@ -131,16 +174,151 @@ namespace Codroid
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public double? RelativeBlend { get; init; }
 
-        public MoveTargetPoint TargetPoint { get; init; } = null!;
+        public MovePoint TargetPoint { get; init; } = null!;
 
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public MoveTargetPoint? MiddlePoint { get; init; }
+        public MovePoint? MiddlePoint { get; init; }
 
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public double[]? Coor { get; init; }
 
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public double[]? Tool { get; init; }
+
+        /// <summary>关节 <c>movJ</c>，下发 <c>targetPoint.jp</c>。</summary>
+        public static MoveInstruction MovJ(
+            JointPoint target,
+            double speed,
+            double acc,
+            double blend = 25,
+            double[]? coor = null,
+            double[]? tool = null,
+            double? relativeBlend = null) =>
+            CreateMove(MoveKinds.MovJ, MovePoint.FromJoint(target), speed, acc, blend, coor, tool, relativeBlend);
+
+        /// <summary>笛卡尔 <c>movJ</c>，下发 <c>targetPoint.cp</c> + <c>rj</c>。</summary>
+        public static MoveInstruction MovJ(
+            CartesianPoint target,
+            double speed,
+            double acc,
+            double blend = 25,
+            double[]? coor = null,
+            double[]? tool = null,
+            double? relativeBlend = null) =>
+            CreateMove(MoveKinds.MovJ, MovePoint.FromCartesian(target), speed, acc, blend, coor, tool, relativeBlend);
+
+        /// <summary>笛卡尔 <c>movL</c>，下发 <c>targetPoint.cp</c> + <c>rj</c>。</summary>
+        public static MoveInstruction MovL(
+            CartesianPoint target,
+            double speed,
+            double acc,
+            double blend = 25,
+            double[]? coor = null,
+            double[]? tool = null,
+            double? relativeBlend = null) =>
+            CreateMove(MoveKinds.MovL, MovePoint.FromCartesian(target), speed, acc, blend, coor, tool, relativeBlend);
+
+        /// <summary>关节 <c>movL</c>，下发 <c>targetPoint.jp</c>。</summary>
+        public static MoveInstruction MovL(
+            JointPoint target,
+            double speed,
+            double acc,
+            double blend = 25,
+            double[]? coor = null,
+            double[]? tool = null,
+            double? relativeBlend = null) =>
+            CreateMove(MoveKinds.MovL, MovePoint.FromJoint(target), speed, acc, blend, coor, tool, relativeBlend);
+
+        /// <summary>笛卡尔 <c>movC</c>（中间点与目标点均为 TCP）。</summary>
+        public static MoveInstruction MovC(
+            CartesianPoint middle,
+            CartesianPoint target,
+            double speed,
+            double acc,
+            double blend = 25,
+            double[]? coor = null,
+            double[]? tool = null,
+            double? relativeBlend = null) =>
+            CreateArcMove(
+                MoveKinds.MovC,
+                MovePoint.FromCartesian(middle),
+                MovePoint.FromCartesian(target),
+                speed,
+                acc,
+                blend,
+                circleNum: null,
+                coor,
+                tool,
+                relativeBlend);
+
+        /// <summary>笛卡尔 <c>movCircle</c>（中间点与目标点均为 TCP）。</summary>
+        public static MoveInstruction MovCircle(
+            CartesianPoint middle,
+            CartesianPoint target,
+            int circleNum,
+            double speed,
+            double acc,
+            double blend = 25,
+            double[]? coor = null,
+            double[]? tool = null,
+            double? relativeBlend = null) =>
+            CreateArcMove(
+                MoveKinds.MovCircle,
+                MovePoint.FromCartesian(middle),
+                MovePoint.FromCartesian(target),
+                speed,
+                acc,
+                blend,
+                circleNum,
+                coor,
+                tool,
+                relativeBlend);
+
+        private static MoveInstruction CreateMove(
+            string type,
+            MovePoint targetPoint,
+            double speed,
+            double acc,
+            double blend,
+            double[]? coor,
+            double[]? tool,
+            double? relativeBlend) =>
+            new()
+            {
+                Type = type,
+                Speed = speed,
+                Acc = acc,
+                Blend = blend,
+                RelativeBlend = relativeBlend,
+                TargetPoint = targetPoint,
+                Coor = coor,
+                Tool = tool
+            };
+
+        private static MoveInstruction CreateArcMove(
+            string type,
+            MovePoint middlePoint,
+            MovePoint targetPoint,
+            double speed,
+            double acc,
+            double blend,
+            int? circleNum,
+            double[]? coor,
+            double[]? tool,
+            double? relativeBlend) =>
+            new()
+            {
+                Type = type,
+                CircleNum = circleNum,
+                Speed = speed,
+                Acc = acc,
+                Blend = blend,
+                RelativeBlend = relativeBlend,
+                MiddlePoint = middlePoint,
+                TargetPoint = targetPoint,
+                Coor = coor,
+                Tool = tool
+            };
     }
 
     /// <summary>
@@ -229,9 +407,18 @@ namespace Codroid
             }
 
             if (string.Equals(t, MoveKinds.MovC, StringComparison.Ordinal)
-                && instruction.TargetPoint.Cp == null)
+                || string.Equals(t, MoveKinds.MovCircle, StringComparison.Ordinal))
             {
-                throw new ArgumentException("movC 目标须使用笛卡尔点 targetPoint.cp。", nameof(instruction));
+                if (instruction.TargetPoint.Cp == null || instruction.MiddlePoint?.Cp == null)
+                {
+                    throw new ArgumentException($"{t} 的中间点与目标点须为笛卡尔点（cp）。", nameof(instruction));
+                }
+            }
+
+            MotionPointValidation.ValidateExclusiveJpCp(instruction.TargetPoint, nameof(instruction));
+            if (instruction.MiddlePoint != null)
+            {
+                MotionPointValidation.ValidateExclusiveJpCp(instruction.MiddlePoint, nameof(instruction));
             }
         }
     }
@@ -258,12 +445,15 @@ namespace Codroid
                 throw new ArgumentException("至少提供一条运动指令。", nameof(commands));
             }
 
-            foreach (var c in commands)
+            var packed = new MoveInstruction[commands.Count];
+            for (var i = 0; i < commands.Count; i++)
             {
+                var c = commands[i];
                 RobotMotionValidation.ValidateMoveInstruction(c);
+                packed[i] = MotionPointPacker.PackInstruction(c);
             }
 
-            var json = JsonSerializer.Serialize(commands, MoveInstructionOptions);
+            var json = JsonSerializer.Serialize(packed, MoveInstructionOptions);
             using var doc = JsonDocument.Parse(json);
             return doc.RootElement.Clone();
         }

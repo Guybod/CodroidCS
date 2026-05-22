@@ -62,6 +62,7 @@ internal static class Program
 
     private static async Task<int> Main(string[] args)
     {
+        ConsoleUtf8.InitConsoleUtf8();
         CliOptions opts;
         try
         {

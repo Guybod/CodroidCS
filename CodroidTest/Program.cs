@@ -15,7 +15,8 @@
 //   dotnet run --project CodroidTest -- io [ip]           // 或 iomanager
 //   dotnet run --project CodroidTest -- register [ip]     // 或 reg：寄存器读写
 //   dotnet run --project CodroidTest -- robotstatus [ip] // 仅订阅 publish/RobotStatus，收 10 秒推送
-//   dotnet run --project CodroidTest -- motion [ip]      // 或 s20 / movecri
+//   dotnet run --project CodroidTest -- motion [ip]      // 或 s20 / movecri：四组合+矩形路径
+//   dotnet run --project CodroidTest -- robotparam [ip] // 机器人设置 19.x（Get/SaveRobotParameter）
 // =============================================================================
 
 using System;
@@ -37,6 +38,7 @@ internal static class Program
     /// <summary>程序入口：无子命令时跑完整套件；带子命令时只跑对应单项。</summary>
     private static async Task Main(string[] args)
     {
+        ConsoleUtf8.InitConsoleUtf8();
         var mode = ParseMode(args, out var robotIp, out var noClean);
 
         switch (mode)
@@ -62,6 +64,9 @@ internal static class Program
             case RunMode.RobotStatusPublishDemo:
                 await RunRobotStatusPublishDemo(robotIp);
                 return;
+            case RunMode.RobotParameterTest:
+                await RunRobotParameterTest(robotIp);
+                return;
             default:
                 // 枚举齐全时不可达；若将来新增 RunMode 未补 switch，宁可失败也不要静默只跑全局变量。
                 throw new InvalidOperationException($"未处理的运行模式: {mode}");
@@ -77,7 +82,8 @@ internal static class Program
         S20MotionCriTest,
         IoTest,
         RegisterTest,
-        RobotStatusPublishDemo
+        RobotStatusPublishDemo,
+        RobotParameterTest
     }
 
     /// <summary>
@@ -218,6 +224,17 @@ internal static class Program
             return RunMode.RobotStatusPublishDemo;
         }
 
+        if (list.Count > 0 && IsRobotParameterCommand(list[0]))
+        {
+            list.RemoveAt(0);
+            if (list.Count > 0)
+            {
+                robotIp = list[0];
+            }
+
+            return RunMode.RobotParameterTest;
+        }
+
         // 「global」可写可不写；写了则跳过该词再读 IP
         if (list.Count > 0 && string.Equals(list[0], "global", StringComparison.OrdinalIgnoreCase))
         {
@@ -259,6 +276,11 @@ internal static class Program
     private static bool IsRobotStatusPublishCommand(string token) =>
         string.Equals(token, "robotstatus", StringComparison.OrdinalIgnoreCase)
         || string.Equals(token, "pubstatus", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsRobotParameterCommand(string token) =>
+        string.Equals(token, "robotparam", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(token, "robotsettings", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(token, "settings", StringComparison.OrdinalIgnoreCase);
 
     // -------------------------------------------------------------------------
     // 控制台输出：分节横幅 + 颜色，便于在日志里一眼看到阶段
@@ -343,7 +365,7 @@ internal static class Program
     }
 
     /// <summary>
-    /// 测试机型 S20-180-ECO_V2：CRI 实时推送 + movJ 三段 + movL 连续四段；运动全程每 1s 打印关节/位姿/运动状态。
+    /// 测试机型 S20-180-ECO_V2：CRI + movJ 三段 + 四组合 API（MovJ/MovL 关节与 TCP）+ movL 矩形路径；全程每 1s 打印状态。
     /// </summary>
     private static async Task RunS20MotionCriCombo(string robotIp)
     {
@@ -389,7 +411,7 @@ internal static class Program
                 }
             }, printCts.Token);
 
-            double[] RjSnapshot() => (double[])robot.Data.JointPosition.Clone();
+            double[] RefJoints() => (double[])robot.Data.JointPosition.Clone();
 
             async Task WaitMotionSettled(TimeSpan maxWait)
             {
@@ -412,66 +434,105 @@ internal static class Program
                 PrintWarn("等待 InMotion=false 超时，仍继续下一步。");
             }
 
-            MoveInstruction MovJ(double[] jp) => new()
-            {
-                Type = MoveKinds.MovJ,
-                Speed = 40,
-                Acc = 100,
-                Blend = 25,
-                TargetPoint = new MoveTargetPoint { Jp = jp }
-            };
+            // §5.1 常量（S20-180-ECO_V2，与 AGENTS.md / update1 一致）
+            var jHome = new[] { 0.0, 0, 90, 0, 90, 0 };
+            var jZero = new[] { 0.0, 0, 0, 0, 0, 0 };
+            var cpDocHome = new[] { 927.504, 214.495, 898.998, 179.999, 0.0, -90.0 };
+            var cpP1 = new[] { 927.511, 214.489, 486.524, 179.999, 0.0, -89.999 };
+            var cpP2 = new[] { 927.516, -160.239, 486.534, 180.0, 0.0, -89.999 };
+            var cpP3 = new[] { 927.515, -160.238, 1111.244, -179.999, 0.0, -89.999 };
+            var cpP4 = new[] { 927.512, 351.971, 1111.249, -179.998, 0.0, -89.999 };
 
-            MoveInstruction MovL(double[] cp, double[] rj) => new()
-            {
-                Type = MoveKinds.MovL,
-                Speed = 150,
-                Acc = 500,
-                Blend = 25,
-                TargetPoint = new MoveTargetPoint { Cp = cp, Rj = rj }
-            };
+            const double movJSpeed = 40;
+            const double movJAcc = 100;
+            const double movLSpeed = 150;
+            const double movLAcc = 500;
 
-            // --- movJ 三段 ---
-            PrintMotionPhase(">>> 开始 movJ 测试 — 关节点到点（0,0,90,0,90,0）→ 全零 → 回到（0,0,90,0,90,0）", ConsoleColor.Black, ConsoleColor.Green);
-            var j1 = new[] { 0.0, 0, 90, 0, 90, 0 };
-            var j2 = new[] { 0.0, 0, 0, 0, 0, 0 };
-            var j3 = new[] { 0.0, 0, 90, 0, 90, 0 };
+            // --- 1) movJ 三段关节 ---
+            PrintMotionPhase(
+                ">>> [1/4] movJ×3 — JointPoint（0,0,90,0,90,0）→ 全零 → 回到 home",
+                ConsoleColor.Black,
+                ConsoleColor.Green);
 
-            await robot.Move(new[] { MovJ(j1) });
-            PrintOk("已下发 movJ → 目标1");
+            await robot.MovJ(JointPoint.Degrees(jHome), movJSpeed, movJAcc);
+            PrintOk("MovJ(JointPoint) → home");
             await WaitMotionSettled(TimeSpan.FromMinutes(3));
 
-            await robot.Move(new[] { MovJ(j2) });
-            PrintOk("已下发 movJ → 目标2（全零）");
+            await robot.MovJ(JointPoint.Degrees(jZero), movJSpeed, movJAcc);
+            PrintOk("MovJ(JointPoint) → 全零");
             await WaitMotionSettled(TimeSpan.FromMinutes(3));
 
-            await robot.Move(new[] { MovJ(j3) });
-            PrintOk("已下发 movJ → 目标3（回到 0,0,90,0,90,0）");
+            await robot.MovJ(JointPoint.Degrees(jHome), movJSpeed, movJAcc);
+            PrintOk("MovJ(JointPoint) → 回到 home");
             await WaitMotionSettled(TimeSpan.FromMinutes(3));
 
-            // --- movL 首段：文档起点仅作说明；指令只发目标点 P1 ---
-            PrintMotionPhase(">>> 开始 movL 测试 — 单段直线到 P1（逆解参考角取自当前 CRI 关节）", ConsoleColor.Black, ConsoleColor.Cyan);
-            PrintVector6("文档参考起点 cp（不单独下发）", new[] { 927.504, 214.495, 898.998, 179.999, 0.0, -90.0 }, "mm, deg");
+            // --- 2) 四组合 API（单段门面 + 一条 Move 多段）---
+            PrintMotionPhase(
+                ">>> [2/4] 四组合 API — movJ(jp) / movJ(cp) / movL(cp) / movL(jp)",
+                ConsoleColor.Black,
+                ConsoleColor.Yellow);
+            Console.WriteLine("  每步前刷新 CRI 关节作逆解参考；TCP 段用 MmDegWithRef。");
 
-            var p1 = new[] { 927.511, 214.489, 486.524, 179.999, 0.0, -89.999 };
-            var rj0 = RjSnapshot();
-            await robot.Move(new[] { MovL(p1, rj0) });
-            PrintOk("已下发 movL → P1");
+            var refA = RefJoints();
+            PrintVector6("  当前参考关节 rj", refA, "deg");
+            await robot.MovJ(JointPoint.Degrees(jZero), movJSpeed, movJAcc);
+            PrintOk("[单段] MovJ(JointPoint) → 全零");
             await WaitMotionSettled(TimeSpan.FromMinutes(3));
 
-            // --- 连续三段 movL（当前已在 P1，一次 Move：P2→P3→P4，段间过渡由控制器衔接）---
-            PrintMotionPhase(">>> 开始连续路径 movL 测试 — 同一条 Move 指令内 3 段直线（P2→P3→P4，当前位姿在 P1）", ConsoleColor.Black, ConsoleColor.Magenta);
-            var rjPath = RjSnapshot();
-            var p2 = new[] { 927.516, -160.239, 486.534, 180.0, 0.0, -89.999 };
-            var p3 = new[] { 927.515, -160.238, 1111.244, -179.999, 0.0, -89.999 };
-            var p4 = new[] { 927.512, 351.971, 1111.249, -179.998, 0.0, -89.999 };
+            var refB = RefJoints();
+            await robot.MovJ(CartesianPoint.MmDegWithRef(cpP1, refB), movJSpeed, movJAcc);
+            PrintOk("[单段] MovJ(CartesianPoint) → P1 TCP（关节运动到笛卡尔）");
+            await WaitMotionSettled(TimeSpan.FromMinutes(3));
 
+            var refC = RefJoints();
+            await robot.MovL(CartesianPoint.MmDegWithRef(cpP2, refC), movLSpeed, movLAcc);
+            PrintOk("[单段] MovL(CartesianPoint) → P2 TCP");
+            await WaitMotionSettled(TimeSpan.FromMinutes(3));
+
+            var refD = RefJoints();
+            await robot.MovL(JointPoint.Degrees(jHome), movLSpeed, movLAcc);
+            PrintOk("[单段] MovL(JointPoint) → home 关节（直线到关节目标）");
+            await WaitMotionSettled(TimeSpan.FromMinutes(3));
+
+            PrintMotionPhase(
+                ">>> [2/4] 四组合 — 一条 Move(path) 连续四段",
+                ConsoleColor.DarkYellow,
+                ConsoleColor.Black);
+            var refPath = RefJoints();
             await robot.Move(new[]
             {
-                MovL(p2, rjPath),
-                MovL(p3, rjPath),
-                MovL(p4, rjPath)
+                MoveInstruction.MovJ(JointPoint.Degrees(jZero), movJSpeed, movJAcc),
+                MoveInstruction.MovJ(CartesianPoint.MmDegWithRef(cpP1, refPath), movJSpeed, movJAcc),
+                MoveInstruction.MovL(CartesianPoint.MmDegWithRef(cpP2, refPath), movLSpeed, movLAcc),
+                MoveInstruction.MovL(JointPoint.Degrees(jHome), movLSpeed, movLAcc),
             });
-            PrintOk("已下发连续 3 段 movL（P2→P3→P4）");
+            PrintOk("Move(path): movJ(jp) → movJ(cp) → movL(cp) → movL(jp)");
+            await WaitMotionSettled(TimeSpan.FromMinutes(6));
+
+            // --- 3) movL 矩形：P1 单段 + P2→P3→P4 多段 ---
+            PrintMotionPhase(
+                ">>> [3/4] movL 矩形 — 单段到 P1，再 Move 连续 P2→P3→P4",
+                ConsoleColor.Black,
+                ConsoleColor.Cyan);
+            PrintVector6("文档参考起点 cp（不单独下发）", cpDocHome, "mm, deg");
+
+            var refP1 = RefJoints();
+            await robot.MovL(CartesianPoint.MmDegWithRef(cpP1, refP1), movLSpeed, movLAcc);
+            PrintOk("MovL(CartesianPoint) → P1");
+            await WaitMotionSettled(TimeSpan.FromMinutes(3));
+
+            PrintMotionPhase(
+                ">>> [4/4] Move(path) — movL×3（P2→P3→P4）",
+                ConsoleColor.Black,
+                ConsoleColor.Magenta);
+            var refRect = RefJoints();
+            await robot.Move(new[]
+            {
+                MoveInstruction.MovL(CartesianPoint.MmDegWithRef(cpP2, refRect), movLSpeed, movLAcc),
+                MoveInstruction.MovL(CartesianPoint.MmDegWithRef(cpP3, refRect), movLSpeed, movLAcc),
+                MoveInstruction.MovL(CartesianPoint.MmDegWithRef(cpP4, refRect), movLSpeed, movLAcc),
+            });
+            PrintOk("Move(path): movL → P2 → P3 → P4");
             await WaitMotionSettled(TimeSpan.FromMinutes(5));
 
             printCts.Cancel();
@@ -612,6 +673,87 @@ internal static class Program
         {
             client.Disconnect();
             Console.WriteLine();
+            PrintOk("已 Disconnect。");
+        }
+    }
+
+    /// <summary>
+    /// 机器人设置 19.x：GetRobotParameters、SetToolFrame(1~15)、SetDefault*Id(0~15)；验证 id=0 不可写。
+    /// </summary>
+    private static async Task RunRobotParameterTest(string robotIp)
+    {
+        var robot = new CodroidClient(robotIp);
+        PrintBanner($"机器人设置参数（19.x）| TCP {robotIp}:9001", ConsoleColor.White);
+        Console.WriteLine("  会修改 Tool[2]（x=15,y=20）并 SetDefaultToolId(2)；请确认无冲突后再跑。");
+        Console.WriteLine();
+
+        try
+        {
+            await robot.Connect();
+            PrintOk("TCP 已连接。");
+
+            PrintStep(1, "GetRobotParameters");
+            var p = await robot.GetRobotParameters();
+            Console.WriteLine(
+                $"  defaultToolId={p.DefaultToolId}, defaultPayloadId={p.DefaultPayloadId}, " +
+                $"defaultCoordinateId={p.DefaultCoordinateId}, maxPayload={p.MaxPayload}");
+            Console.WriteLine($"  Tool 条数={p.Tool.Count}, Payload={p.Payload.Count}, Coordinate={p.Coordinate.Count}");
+
+            var t0 = p.Tool.First(f => f.Id == 0);
+            Console.WriteLine($"  Tool[0]（只读）: x={t0.X}, y={t0.Y}, z={t0.Z}");
+
+            PrintStep(2, "SetToolFrame(0) 应被拒绝");
+            try
+            {
+                await robot.SetToolFrame(
+                    0,
+                    new RobotFrame { Id = 0, X = 1, Y = 0, Z = 0, A = 0, B = 0, C = 0 });
+                PrintErr("SetToolFrame(0) 未抛异常，不符合预期。");
+            }
+            catch (ArgumentOutOfRangeException ex)
+            {
+                PrintOk("已拒绝: " + ex.Message);
+            }
+
+            PrintStep(3, "SetToolFrame(2) — 与协议文档示例一致");
+            await robot.SetToolFrame(
+                2,
+                new RobotFrame { Id = 2, X = 15, Y = 20, Z = 0, A = 0, B = 0, C = 0 });
+            PrintOk("已下发 Tool[2] x=15 y=20");
+
+            var pAfter = await robot.GetRobotParameters();
+            var t2 = pAfter.Tool.First(f => f.Id == 2);
+            Console.WriteLine($"  读回 Tool[2]: x={t2.X}, y={t2.Y}, z={t2.Z}");
+            var t0After = pAfter.Tool.First(f => f.Id == 0);
+            Console.WriteLine($"  Tool[0] 仍为: x={t0After.X}, y={t0After.Y}（须全零）");
+
+            PrintStep(4, "SetDefaultToolId(2)（允许 0~15）");
+            await robot.SetDefaultToolId(2);
+            PrintOk("SetDefaultToolId(2) 已下发");
+
+            var pDef = await robot.GetRobotParameters();
+            Console.WriteLine($"  读回 defaultToolId={pDef.DefaultToolId}");
+
+            PrintWarn("未调用 SetCollisionSensitivity / SetPayload，避免改变现场运行状态。");
+            PrintBanner("robotparam 测试结束", ConsoleColor.Green);
+        }
+        catch (CodroidCommandException ex)
+        {
+            PrintBanner("控制器错误", ConsoleColor.Red);
+            PrintErr(ex.Message);
+            if (ex.ControllerError != null)
+            {
+                Console.WriteLine("  err: " + ex.ControllerError);
+            }
+        }
+        catch (Exception ex)
+        {
+            PrintBanner("测试异常", ConsoleColor.Red);
+            PrintErr(ex.Message);
+        }
+        finally
+        {
+            robot.Disconnect();
             PrintOk("已 Disconnect。");
         }
     }

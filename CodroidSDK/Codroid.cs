@@ -989,7 +989,7 @@ namespace Codroid
         /// 启动后须每约 <see cref="RobotMotionHeartbeat.RecommendedIntervalMilliseconds"/> ms 调用 <see cref="MoveToHeartbeat"/>。
         /// </summary>
         /// <param name="kind">moveTo 类型；不同值代表回零、回安全点、规划关节/直线等控制器内置行为。</param>
-        /// <param name="target">规划目标点；当 <paramref name="kind"/> 为 <see cref="MoveToKind.JointPlanned"/> 或 <see cref="MoveToKind.LinePlanned"/> 时必须提供，且至少包含 <c>cp</c>、<c>jp</c> 或 <c>ep</c> 之一。</param>
+        /// <param name="target">规划目标点；当 <paramref name="kind"/> 为 <see cref="MoveToKind.JointPlanned"/> 或 <see cref="MoveToKind.LinePlanned"/> 时必须提供。请用 <see cref="MoveToTarget.Joint"/> 或 <see cref="MoveToTarget.Cartesian"/> 构造。</param>
         /// <returns>控制器返回的响应对象；仅表示请求被接收，运动完成需结合状态/心跳判断。</returns>
         /// <exception cref="ArgumentException">需要目标点但未提供，或目标点不包含任何有效位置字段。</exception>
         /// <exception cref="InvalidOperationException">尚未连接 TCP，或响应无法反序列化。</exception>
@@ -1115,6 +1115,218 @@ namespace Codroid
             int currentId = NextId();
             return await _TcpClient.SendCommand(currentId, "Robot/setPayload", payloadId);
         }
+
+        /// <summary>
+        /// 获取设置界面参数（指令：<c>Robot/GetRobotParameter</c>，协议 19.7）。
+        /// </summary>
+        public async Task<RobotParameters> GetRobotParameters()
+        {
+            var response = await _TcpClient.SendCommand(NextId(), "Robot/GetRobotParameter", string.Empty);
+            return RobotSettingsSerialization.ParseFromDb(response.db);
+        }
+
+        /// <summary>
+        /// 设置默认负载编号（指令：<c>Robot/SaveRobotParameter</c>，协议 19.2）。<paramref name="payloadId"/> 为 0~15。
+        /// </summary>
+        public Task<CommonResponse> SetDefaultPayloadId(int payloadId)
+        {
+            RobotSettingsValidation.ValidateDefaultSlotId(payloadId, nameof(payloadId));
+            return SendSaveRobotParameter(RobotSettingsSerialization.BuildDefaultPayloadIdDb(payloadId));
+        }
+
+        /// <summary>
+        /// 设置默认工具坐标系编号（指令：<c>Robot/SaveRobotParameter</c>，协议 19.3）。<paramref name="toolId"/> 为 0~15。
+        /// </summary>
+        public Task<CommonResponse> SetDefaultToolId(int toolId)
+        {
+            RobotSettingsValidation.ValidateDefaultSlotId(toolId, nameof(toolId));
+            return SendSaveRobotParameter(RobotSettingsSerialization.BuildDefaultToolIdDb(toolId));
+        }
+
+        /// <summary>
+        /// 设置默认用户坐标系编号（指令：<c>Robot/SaveRobotParameter</c>，协议 19.6）。<paramref name="coordinateId"/> 为 0~15。
+        /// </summary>
+        public Task<CommonResponse> SetDefaultUserCoordinateId(int coordinateId)
+        {
+            RobotSettingsValidation.ValidateDefaultSlotId(coordinateId, nameof(coordinateId));
+            return SendSaveRobotParameter(
+                RobotSettingsSerialization.BuildDefaultCoordinateIdDb(coordinateId));
+        }
+
+        /// <summary>
+        /// 下发完整工具坐标系表（协议 19.4）。须包含 id 0~15；<b>id=0 项必须保持全零</b>。
+        /// </summary>
+        public Task<CommonResponse> SaveToolFrames(IReadOnlyList<RobotFrame> frames)
+        {
+            RobotSettingsValidation.ValidateToolFramesForSave(frames, nameof(frames));
+            return SendSaveRobotParameter(RobotSettingsSerialization.BuildToolDb(frames));
+        }
+
+        /// <summary>
+        /// 修改单个工具坐标系（先 <see cref="GetRobotParameters"/> 再保存）。<paramref name="frameId"/> 仅允许 1~15。
+        /// </summary>
+        public async Task<CommonResponse> SetToolFrame(int frameId, RobotFrame frame)
+        {
+            RobotSettingsValidation.ValidateWritableFrameId(frameId, nameof(frameId));
+            RobotSettingsValidation.ValidateFrameIdMatches(frameId, frame);
+
+            var current = await GetRobotParameters().ConfigureAwait(false);
+            var merged = RobotSettingsSerialization.MergeToolFrame(current.Tool, frameId, frame);
+            RobotSettingsValidation.ValidateToolFramesForSave(merged, nameof(merged));
+            return await SendSaveRobotParameter(RobotSettingsSerialization.BuildToolDb(merged))
+                .ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// 下发完整负载坐标系表（协议 19.5）。须包含 id 0~15；<b>id=0 项必须保持全零</b>。
+        /// </summary>
+        public Task<CommonResponse> SavePayloadFrames(IReadOnlyList<RobotPayloadFrame> frames)
+        {
+            RobotSettingsValidation.ValidatePayloadFramesForSave(frames, nameof(frames));
+            return SendSaveRobotParameter(RobotSettingsSerialization.BuildPayloadDb(frames));
+        }
+
+        /// <summary>
+        /// 修改单个负载坐标系（先读后改）。<paramref name="frameId"/> 仅允许 1~15。
+        /// </summary>
+        public async Task<CommonResponse> SetPayloadFrame(int frameId, RobotPayloadFrame frame)
+        {
+            RobotSettingsValidation.ValidateWritableFrameId(frameId, nameof(frameId));
+            RobotSettingsValidation.ValidateFrameIdMatches(frameId, frame);
+
+            var current = await GetRobotParameters().ConfigureAwait(false);
+            var merged = RobotSettingsSerialization.MergePayloadFrame(current.Payload, frameId, frame);
+            RobotSettingsValidation.ValidatePayloadFramesForSave(merged, nameof(merged));
+            return await SendSaveRobotParameter(RobotSettingsSerialization.BuildPayloadDb(merged))
+                .ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// 下发完整用户坐标系表（协议 19.6 坐标表部分）。须包含 id 0~15；<b>id=0 项必须保持全零</b>。
+        /// </summary>
+        public Task<CommonResponse> SaveUserCoordinateFrames(IReadOnlyList<RobotFrame> frames)
+        {
+            RobotSettingsValidation.ValidateToolFramesForSave(frames, nameof(frames));
+            return SendSaveRobotParameter(RobotSettingsSerialization.BuildCoordinateDb(frames));
+        }
+
+        /// <summary>
+        /// 修改单个用户坐标系（先读后改）。<paramref name="frameId"/> 仅允许 1~15。
+        /// </summary>
+        public async Task<CommonResponse> SetUserCoordinateFrame(int frameId, RobotFrame frame)
+        {
+            RobotSettingsValidation.ValidateWritableFrameId(frameId, nameof(frameId));
+            RobotSettingsValidation.ValidateFrameIdMatches(frameId, frame);
+
+            var current = await GetRobotParameters().ConfigureAwait(false);
+            var merged = RobotSettingsSerialization.MergeCoordinateFrame(current.Coordinate, frameId, frame);
+            RobotSettingsValidation.ValidateToolFramesForSave(merged, nameof(merged));
+            return await SendSaveRobotParameter(RobotSettingsSerialization.BuildCoordinateDb(merged))
+                .ConfigureAwait(false);
+        }
+
+        private Task<CommonResponse> SendSaveRobotParameter(object db) =>
+            _TcpClient.SendCommand(NextId(), "Robot/SaveRobotParameter", db);
+
+        /// <summary>
+        /// 单段关节 <c>movJ</c>（指令：<c>Robot/move</c>，<c>targetPoint.jp</c>）。
+        /// </summary>
+        public Task<CommonResponse> MovJ(
+            JointPoint target,
+            double speed,
+            double acc,
+            double blend = 25,
+            double[]? coor = null,
+            double[]? tool = null,
+            double? relativeBlend = null) =>
+            Move(new[]
+            {
+                MoveInstruction.MovJ(target, speed, acc, blend, coor, tool, relativeBlend)
+            });
+
+        /// <summary>
+        /// 单段笛卡尔 <c>movJ</c>（<c>targetPoint.cp</c> + <c>rj</c>；未设 <c>rj</c> 时打包为默认参考关节）。
+        /// </summary>
+        public Task<CommonResponse> MovJ(
+            CartesianPoint target,
+            double speed,
+            double acc,
+            double blend = 25,
+            double[]? coor = null,
+            double[]? tool = null,
+            double? relativeBlend = null) =>
+            Move(new[]
+            {
+                MoveInstruction.MovJ(target, speed, acc, blend, coor, tool, relativeBlend)
+            });
+
+        /// <summary>
+        /// 单段笛卡尔 <c>movL</c>（<c>targetPoint.cp</c> + <c>rj</c>）。
+        /// </summary>
+        public Task<CommonResponse> MovL(
+            CartesianPoint target,
+            double speed,
+            double acc,
+            double blend = 25,
+            double[]? coor = null,
+            double[]? tool = null,
+            double? relativeBlend = null) =>
+            Move(new[]
+            {
+                MoveInstruction.MovL(target, speed, acc, blend, coor, tool, relativeBlend)
+            });
+
+        /// <summary>
+        /// 单段关节 <c>movL</c>（<c>targetPoint.jp</c>）。
+        /// </summary>
+        public Task<CommonResponse> MovL(
+            JointPoint target,
+            double speed,
+            double acc,
+            double blend = 25,
+            double[]? coor = null,
+            double[]? tool = null,
+            double? relativeBlend = null) =>
+            Move(new[]
+            {
+                MoveInstruction.MovL(target, speed, acc, blend, coor, tool, relativeBlend)
+            });
+
+        /// <summary>
+        /// 单段笛卡尔 <c>movC</c>（中间点与目标点均为 TCP）。
+        /// </summary>
+        public Task<CommonResponse> MovC(
+            CartesianPoint middle,
+            CartesianPoint target,
+            double speed,
+            double acc,
+            double blend = 25,
+            double[]? coor = null,
+            double[]? tool = null,
+            double? relativeBlend = null) =>
+            Move(new[]
+            {
+                MoveInstruction.MovC(middle, target, speed, acc, blend, coor, tool, relativeBlend)
+            });
+
+        /// <summary>
+        /// 单段笛卡尔 <c>movCircle</c>（中间点与目标点均为 TCP）。
+        /// </summary>
+        public Task<CommonResponse> MovCircle(
+            CartesianPoint middle,
+            CartesianPoint target,
+            int circleNum,
+            double speed,
+            double acc,
+            double blend = 25,
+            double[]? coor = null,
+            double[]? tool = null,
+            double? relativeBlend = null) =>
+            Move(new[]
+            {
+                MoveInstruction.MovCircle(
+                    middle, target, circleNum, speed, acc, blend, coor, tool, relativeBlend)
+            });
 
         /// <summary>
         /// 下发运动指令列表（指令：<c>Robot/move</c>）。不要设置空的 <c>coor</c>/<c>tool</c> 数组。

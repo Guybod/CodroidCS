@@ -73,7 +73,8 @@ SDK 公共函数名不加 `Async` 后缀，即使返回类型是 `Task` / `Task<
 - `ConnectRemoteAndSwitchOn()`
 - `GetIoValues(...)`
 - `SetRegisterValue(...)`
-- `Move(...)`
+- `MovJ(...)` / `MovL(...)` / `MovC(...)` / `MovCircle(...)` / `Move(...)`
+- `GetRobotParameters` / `SetDefaultToolId` / `SetToolFrame` / …（机器人设置 19.x）
 - `StartCriControl(...)`
 - `CriRealtimeDispatcher.SendTrajectory(...)`
 
@@ -110,6 +111,42 @@ finally
 ```
 
 所有 TCP 指令都会在控制器返回 `err` 时抛出 `CodroidCommandException`；10 秒内未收到对应 `id` 响应时抛出 `TimeoutException`。参数范围错误（例如 DO 只能写 0/1、CRI 控制周期必须整除 1000）会在 SDK 侧先抛 `ArgumentException` 或 `ArgumentOutOfRangeException`。
+
+### Windows 控制台中文
+
+示例程序入口首行调用（Linux/macOS 无操作）：
+
+```csharp
+ConsoleUtf8.InitConsoleUtf8();
+```
+
+## 运动指令（2.1.1+）
+
+运动目标使用强类型，避免关节角与 TCP 位姿混用：
+
+| 类型 | 含义 | 工厂 |
+|------|------|------|
+| `JointPoint` | 六轴关节角（度） | `JointPoint.Degrees(...)` |
+| `CartesianPoint` | TCP `[x,y,z,rx,ry,rz]`（mm + 度） | `MmDeg(...)` / `MmDegWithRef(pose, refJoints)` |
+
+单段下发：
+
+```csharp
+await robot.MovJ(JointPoint.Degrees(new[] { 0, 0, 90, 0, 90, 0 }), speed: 40, acc: 100);
+await robot.MovL(CartesianPoint.MmDegWithRef(pose, robot.CriData.JointPosition), speed: 150, acc: 500);
+```
+
+多段路径仍用 `Move`，由 `MoveInstruction` 工厂组段：
+
+```csharp
+await robot.Move(new[]
+{
+    MoveInstruction.MovJ(JointPoint.Degrees(j1), 40, 100),
+    MoveInstruction.MovL(CartesianPoint.MmDegWithRef(p2, refJ), 150, 500),
+});
+```
+
+`MovJ` 可接受 `CartesianPoint`（关节运动到 TCP）；`MovL` 可接受 `JointPoint`（直线到关节目标）。`MovC` / `MovCircle` 仅支持 `CartesianPoint`。笛卡尔点未设 `rj` 时，下发自动补默认 `[20,20,20,20,20,20]`。
 
 ## CRI 实时数据与实时控制
 
