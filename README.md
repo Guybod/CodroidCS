@@ -18,7 +18,8 @@ Codroid 机器人控制器的 **C# SDK**：通过 TCP/UDP 与 JSON 协议与控�
 | 目录 / 项目 | 说明 |
 |-------------|------|
 | `CodroidSDK/` | SDK 类库（NuGet 包 id：`Codroidsdk`，构建时可生成 `.nupkg`） |
-| `CodroidTest/` | 控制台示例程序，演示各类 API 用法 |
+| `CodroidTestNet8/` | 控制台示例程序（net8.0），演示各类 API 用法 |
+| `CodroidTestNet6/` | 控制台示例程序（net6.0），复用同一 `Program.cs` |
 | `CodroidCRITest/` | CRI 实时控制示例程序，演示轨迹规划与 UDP CommandData 周期下发 |
 
 ## 构建 SDK
@@ -31,22 +32,22 @@ dotnet build CodroidSDK/CodroidCS.csproj -c Release
 
 ## 运行示例程序
 
-示例默认连接的控制器 IP 在 `CodroidTest/Program.cs` 中的 `DefaultRobotIp`；也可通过命令行传入。
+示例默认连接的控制器 IP 在 `CodroidTestNet8/Program.cs` 中的 `DefaultRobotIp`；也可通过命令行传入。
 
 ```bash
 # 完整套件（默认）
-dotnet run --project CodroidTest
+dotnet run --project CodroidTestNet8/CodroidTestNet8.csproj
 
 # 指定控制器 IP
-dotnet run --project CodroidTest -- 192.168.8.10
+dotnet run --project CodroidTestNet8/CodroidTestNet8.csproj -- 192.168.8.10
 
 # 仅运行某一类演示（如 CRI、IO、寄存器等）
-dotnet run --project CodroidTest -- cri 192.168.8.10
-dotnet run --project CodroidTest -- io 192.168.8.10
-dotnet run --project CodroidTest -- register 192.168.8.10
+dotnet run --project CodroidTestNet8/CodroidTestNet8.csproj -- cri 192.168.8.10
+dotnet run --project CodroidTestNet8/CodroidTestNet8.csproj -- io 192.168.8.10
+dotnet run --project CodroidTestNet8/CodroidTestNet8.csproj -- register 192.168.8.10
 ```
 
-更多子命令与说明见 `CodroidTest/Program.cs` 文件顶部注释。
+更多子命令与说明见 `CodroidTestNet8/Program.cs` 文件顶部注释。
 
 ## 在自己的项目中引用
 
@@ -147,6 +148,28 @@ await robot.Move(new[]
 ```
 
 `MovJ` 可接受 `CartesianPoint`（关节运动到 TCP）；`MovL` 可接受 `JointPoint`（直线到关节目标）。`MovC` / `MovCircle` 仅支持 `CartesianPoint`。笛卡尔点未设 `rj` 时，下发自动补默认 `[20,20,20,20,20,20]`。
+
+### 阻塞与非阻塞
+
+- 非阻塞（返回 `Task`）：`MovJ` / `MovL` / `Move`
+- 阻塞到“命令响应”：`MovJSync` / `MovLSync`
+- 阻塞到“运动完成且到位（CRI 判定）”：`MovJAndWaitSync` / `MovLAndWaitSync` / `MoveAndWaitSync` / `MoveSync`
+
+`AndWait` 系列使用 `MotionWaitOptions` 判定完成：CRI 数据新鲜度、`InMotion=false` 连续样本、目标误差阈值（关节或笛卡尔）。
+
+```csharp
+var wait = new MotionWaitOptions
+{
+    Timeout = TimeSpan.FromSeconds(90),
+    CriStaleTimeout = TimeSpan.FromMilliseconds(700),
+    JointToleranceDeg = 0.3,
+    CartesianPositionToleranceMm = 2.0,
+    CartesianOrientationToleranceDeg = 1.5
+};
+
+robot.MovJAndWaitSync(JointPoint.Degrees(new[] { 0, 0, 90, 0, 90, 0 }), 40, 100, wait);
+robot.MovJAndWaitSync(CartesianPoint.MmDegWithRef(pose, robot.CriData.JointPosition), 40, 100, wait);
+```
 
 ## CRI 实时数据与实时控制
 

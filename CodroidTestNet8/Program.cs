@@ -2,21 +2,23 @@
 // CodroidTest — 控制台示例程序
 // -----------------------------------------------------------------------------
 // 【默认：完整套件】无子命令即跑全部 7 段（含 RobotStatus 订阅 10 秒）
-//   dotnet run --project CodroidTest
-//   dotnet run --project CodroidTest -- 192.168.8.10     // 指定控制器 IP 跑全套
-//   dotnet run --project CodroidTest -- all 192.168.8.10   // 显式写 all，同上
+//   dotnet run --project CodroidTestNet8/CodroidTestNet8.csproj
+//   dotnet run --project CodroidTestNet8/CodroidTestNet8.csproj -- 192.168.8.10     // 指定控制器 IP 跑全套
+//   dotnet run --project CodroidTestNet8/CodroidTestNet8.csproj -- all 192.168.8.10   // 显式写 all，同上
 //   顺序：全局变量 → 正逆解 → IO → 寄存器 → RobotStatus → CRI → S20 运动+CRI
-//   dotnet run --project CodroidTest -- … --no-clean     // 仅影响「全局变量」段是否删除 sdk_gv_*
+//   dotnet run --project CodroidTestNet8/CodroidTestNet8.csproj -- … --no-clean     // 仅影响「全局变量」段是否删除 sdk_gv_*
 //
 // 【仅单项】须带子命令：
-//   dotnet run --project CodroidTest -- global [ip]
-//   dotnet run --project CodroidTest -- cri [ip]
-//   dotnet run --project CodroidTest -- kin [ip]
-//   dotnet run --project CodroidTest -- io [ip]           // 或 iomanager
-//   dotnet run --project CodroidTest -- register [ip]     // 或 reg：寄存器读写
-//   dotnet run --project CodroidTest -- robotstatus [ip] // 仅订阅 publish/RobotStatus，收 10 秒推送
-//   dotnet run --project CodroidTest -- motion [ip]      // 或 s20 / movecri：四组合+矩形路径
-//   dotnet run --project CodroidTest -- robotparam [ip] // 机器人设置 19.x（Get/SaveRobotParameter）
+//   dotnet run --project CodroidTestNet8/CodroidTestNet8.csproj -- global [ip]
+//   dotnet run --project CodroidTestNet8/CodroidTestNet8.csproj -- cri [ip]
+//   dotnet run --project CodroidTestNet8/CodroidTestNet8.csproj -- kin [ip]
+//   dotnet run --project CodroidTestNet8/CodroidTestNet8.csproj -- io [ip]           // 或 iomanager
+//   dotnet run --project CodroidTestNet8/CodroidTestNet8.csproj -- register [ip]     // 或 reg：寄存器读写
+//   dotnet run --project CodroidTestNet8/CodroidTestNet8.csproj -- robotstatus [ip] // 仅订阅 publish/RobotStatus，收 10 秒推送
+//   dotnet run --project CodroidTestNet8/CodroidTestNet8.csproj -- motion [ip]      // 或 s20 / movecri：四组合+矩形路径
+//   dotnet run --project CodroidTestNet8/CodroidTestNet8.csproj -- robotparam [ip] // 机器人设置 19.x（Get/SaveRobotParameter）
+//   dotnet run --project CodroidTestNet8/CodroidTestNet8.csproj -- syncmotion [ip] // 阻塞运动 AndWait（CRI 新鲜度+到位判定）
+//   dotnet run --project CodroidTestNet6/CodroidTestNet6.csproj -- syncmotion [ip] // net6.0 demo
 // =============================================================================
 
 using System;
@@ -67,6 +69,9 @@ internal static class Program
             case RunMode.RobotParameterTest:
                 await RunRobotParameterTest(robotIp);
                 return;
+            case RunMode.SyncMotionTest:
+                await RunSyncMotionTest(robotIp);
+                return;
             default:
                 // 枚举齐全时不可达；若将来新增 RunMode 未补 switch，宁可失败也不要静默只跑全局变量。
                 throw new InvalidOperationException($"未处理的运行模式: {mode}");
@@ -83,7 +88,8 @@ internal static class Program
         IoTest,
         RegisterTest,
         RobotStatusPublishDemo,
-        RobotParameterTest
+        RobotParameterTest,
+        SyncMotionTest
     }
 
     /// <summary>
@@ -235,6 +241,17 @@ internal static class Program
             return RunMode.RobotParameterTest;
         }
 
+        if (list.Count > 0 && IsSyncMotionCommand(list[0]))
+        {
+            list.RemoveAt(0);
+            if (list.Count > 0)
+            {
+                robotIp = list[0];
+            }
+
+            return RunMode.SyncMotionTest;
+        }
+
         // 「global」可写可不写；写了则跳过该词再读 IP
         if (list.Count > 0 && string.Equals(list[0], "global", StringComparison.OrdinalIgnoreCase))
         {
@@ -281,6 +298,11 @@ internal static class Program
         string.Equals(token, "robotparam", StringComparison.OrdinalIgnoreCase)
         || string.Equals(token, "robotsettings", StringComparison.OrdinalIgnoreCase)
         || string.Equals(token, "settings", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsSyncMotionCommand(string token) =>
+        string.Equals(token, "syncmotion", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(token, "motionsync", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(token, "andwait", StringComparison.OrdinalIgnoreCase);
 
     // -------------------------------------------------------------------------
     // 控制台输出：分节横幅 + 颜色，便于在日志里一眼看到阶段
@@ -753,6 +775,92 @@ internal static class Program
         }
         finally
         {
+            robot.Disconnect();
+            PrintOk("已 Disconnect。");
+        }
+    }
+
+    /// <summary>
+    /// 阻塞运动演示：使用 AndWaitSync API（CRI 新鲜度 + InMotion + 目标到位）判定完成。
+    /// </summary>
+    private static async Task RunSyncMotionTest(string robotIp)
+    {
+        const string localUdpIp = "192.168.8.150";
+        const int localUdpPort = 18888;
+
+        var robot = new CodroidClient(robotIp);
+        PrintBanner($"阻塞运动测试（AndWait）| {robotIp}", ConsoleColor.White);
+        Console.WriteLine($"  将启动 CRI: {localUdpIp}:{localUdpPort}；请按现场修改 Program.cs 常量。");
+        Console.WriteLine("  流程：MovJAndWaitSync(joint) → MovJAndWaitSync(cart) → MovLAndWaitSync(joint) → MoveSync(path)");
+        Console.WriteLine();
+
+        try
+        {
+            await robot.ConnectRemoteAndSwitchOn();
+            PrintOk("已连接并远程 + 上电。");
+
+            await robot.StartCriDataPush(localUdpIp, localUdpPort);
+            PrintOk("CRI StartDataPush 已开启。");
+            await Task.Delay(600);
+
+            var wait = new MotionWaitOptions
+            {
+                Timeout = TimeSpan.FromSeconds(90),
+                CriStaleTimeout = TimeSpan.FromMilliseconds(700),
+                PollInterval = TimeSpan.FromMilliseconds(50),
+                SettledSamples = 3,
+                JointToleranceDeg = 0.3,
+                CartesianPositionToleranceMm = 2.0,
+                CartesianOrientationToleranceDeg = 1.5
+            };
+
+            var homeJ = JointPoint.Degrees(new[] { 0.0, 0, 90, 0, 90, 0 });
+            var zeroJ = JointPoint.Degrees(new[] { 0.0, 0, 0, 0, 0, 0 });
+            var p1 = new[] { 927.511, 214.489, 486.524, 179.999, 0.0, -89.999 };
+            var refJ = robot.CriData.JointPosition;
+            var p1Cart = CartesianPoint.MmDegWithRef(p1, refJ);
+
+            PrintStep(1, "MovJAndWaitSync(JointPoint) -> home");
+            robot.MovJAndWaitSync(homeJ, speed: 40, acc: 100, wait: wait);
+            PrintOk("完成：MovJAndWaitSync(joint) 到位");
+
+            PrintStep(2, "MovJAndWaitSync(CartesianPoint) -> P1");
+            robot.MovJAndWaitSync(p1Cart, speed: 40, acc: 100, wait: wait);
+            PrintOk("完成：MovJAndWaitSync(cart) 到位");
+
+            PrintStep(3, "MovLAndWaitSync(JointPoint) -> zero");
+            robot.MovLAndWaitSync(zeroJ, speed: 150, acc: 500, wait: wait);
+            PrintOk("完成：MovLAndWaitSync(joint) 到位");
+
+            PrintStep(4, "MoveSync(path) -> [movJ(joint), movL(cart)]");
+            var refPath = robot.CriData.JointPosition;
+            bool ok = robot.MoveSync(
+                new[]
+                {
+                    MoveInstruction.MovJ(homeJ, 40, 100),
+                    MoveInstruction.MovL(CartesianPoint.MmDegWithRef(p1, refPath), 150, 500)
+                },
+                wait);
+            PrintOk($"完成：MoveSync(path) 返回 {ok}");
+
+            PrintBanner("syncmotion 测试完成", ConsoleColor.Green);
+        }
+        catch (Exception ex)
+        {
+            PrintBanner("syncmotion 异常", ConsoleColor.Red);
+            PrintErr(ex.Message);
+        }
+        finally
+        {
+            try
+            {
+                await robot.StopCriDataPush(localUdpIp, localUdpPort);
+            }
+            catch
+            {
+                // ignore
+            }
+
             robot.Disconnect();
             PrintOk("已 Disconnect。");
         }

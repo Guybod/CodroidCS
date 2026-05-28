@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -20,6 +21,7 @@ namespace Codroid
         private int _id;
         private readonly object _criDataLock = new();
         private readonly CriRealTimeData _criData = new();
+        private long _lastCriReceivedUtcTicks;
         private UdpClient? _criUdpClient;
         private CancellationTokenSource? _criUdpCts;
         private Task? _criUdpTask;
@@ -1053,6 +1055,23 @@ namespace Codroid
         }
 
         /// <summary>
+        /// 停止 RunTo / moveTo（指令：<c>Robot/moveTo</c>，<c>db.type = -1</c>）。
+        /// 与 <see cref="StopRobotMove"/> 区分：本方法仅发送 moveTo 停止信号。
+        /// </summary>
+        /// <returns>控制器返回的响应对象。</returns>
+        /// <exception cref="InvalidOperationException">尚未连接 TCP，或响应无法反序列化。</exception>
+        /// <exception cref="TimeoutException">等待响应超时（10 秒）。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
+        public async Task<CommonResponse> StopMoveTo()
+        {
+            int currentId = NextId();
+            return await _TcpClient.SendCommand(
+                currentId,
+                "Robot/moveTo",
+                new { type = (int)MoveToKind.Stop });
+        }
+
+        /// <summary>
         /// 设置手动运动倍率（指令：<c>Robot/setManualMoveRate</c>），<paramref name="percent"/> 为 1~100。
         /// </summary>
         /// <param name="percent">手动倍率百分比，范围 1~100。</param>
@@ -1245,6 +1264,20 @@ namespace Codroid
             });
 
         /// <summary>
+        /// 阻塞方式下发单段关节 <c>movJ</c>（仅等待指令响应，不等待到位）。
+        /// </summary>
+        public CommonResponse MovJSync(
+            JointPoint target,
+            double speed,
+            double acc,
+            double blend = 25,
+            double[]? coor = null,
+            double[]? tool = null,
+            double? relativeBlend = null) =>
+            MovJ(target, speed, acc, blend, coor, tool, relativeBlend)
+                .ConfigureAwait(false).GetAwaiter().GetResult();
+
+        /// <summary>
         /// 单段笛卡尔 <c>movJ</c>（<c>targetPoint.cp</c> + <c>rj</c>；未设 <c>rj</c> 时打包为默认参考关节）。
         /// </summary>
         public Task<CommonResponse> MovJ(
@@ -1259,6 +1292,20 @@ namespace Codroid
             {
                 MoveInstruction.MovJ(target, speed, acc, blend, coor, tool, relativeBlend)
             });
+
+        /// <summary>
+        /// 阻塞方式下发单段笛卡尔 <c>movJ</c>（仅等待指令响应，不等待到位）。
+        /// </summary>
+        public CommonResponse MovJSync(
+            CartesianPoint target,
+            double speed,
+            double acc,
+            double blend = 25,
+            double[]? coor = null,
+            double[]? tool = null,
+            double? relativeBlend = null) =>
+            MovJ(target, speed, acc, blend, coor, tool, relativeBlend)
+                .ConfigureAwait(false).GetAwaiter().GetResult();
 
         /// <summary>
         /// 单段笛卡尔 <c>movL</c>（<c>targetPoint.cp</c> + <c>rj</c>）。
@@ -1277,6 +1324,20 @@ namespace Codroid
             });
 
         /// <summary>
+        /// 阻塞方式下发单段笛卡尔 <c>movL</c>（仅等待指令响应，不等待到位）。
+        /// </summary>
+        public CommonResponse MovLSync(
+            CartesianPoint target,
+            double speed,
+            double acc,
+            double blend = 25,
+            double[]? coor = null,
+            double[]? tool = null,
+            double? relativeBlend = null) =>
+            MovL(target, speed, acc, blend, coor, tool, relativeBlend)
+                .ConfigureAwait(false).GetAwaiter().GetResult();
+
+        /// <summary>
         /// 单段关节 <c>movL</c>（<c>targetPoint.jp</c>）。
         /// </summary>
         public Task<CommonResponse> MovL(
@@ -1291,6 +1352,20 @@ namespace Codroid
             {
                 MoveInstruction.MovL(target, speed, acc, blend, coor, tool, relativeBlend)
             });
+
+        /// <summary>
+        /// 阻塞方式下发单段关节 <c>movL</c>（仅等待指令响应，不等待到位）。
+        /// </summary>
+        public CommonResponse MovLSync(
+            JointPoint target,
+            double speed,
+            double acc,
+            double blend = 25,
+            double[]? coor = null,
+            double[]? tool = null,
+            double? relativeBlend = null) =>
+            MovL(target, speed, acc, blend, coor, tool, relativeBlend)
+                .ConfigureAwait(false).GetAwaiter().GetResult();
 
         /// <summary>
         /// 单段笛卡尔 <c>movC</c>（中间点与目标点均为 TCP）。
@@ -1344,6 +1419,142 @@ namespace Codroid
             JsonElement payload = MotionCommandJson.SerializeMoveInstructions(instructions);
             int currentId = NextId();
             return await _TcpClient.SendCommand(currentId, "Robot/move", payload);
+        }
+
+        /// <summary>
+        /// 阻塞方式下发路径，并等待 CRI 判定“运动完成且末段目标到位”后返回。
+        /// </summary>
+        /// <param name="instructions">运动路径。</param>
+        /// <param name="wait">等待参数；为 null 时使用默认值。</param>
+        /// <returns>成功到位返回 <c>true</c>。</returns>
+        /// <exception cref="TimeoutException">等待超时或 CRI 数据陈旧。</exception>
+        /// <exception cref="InvalidOperationException">运动异常停止、碰撞/急停/报警等导致未到位。</exception>
+        /// <exception cref="CodroidCommandException">控制器指令响应 <c>err</c> 非空。</exception>
+        public bool MoveSync(IReadOnlyList<MoveInstruction> instructions, MotionWaitOptions? wait = null)
+        {
+            Move(instructions).ConfigureAwait(false).GetAwaiter().GetResult();
+            var options = GetWait(wait);
+            var targetReached = BuildMoveTargetReachedPredicate(instructions, options);
+            WaitUntilSettledByCri(targetReached, "move(path)", options);
+            return true;
+        }
+
+        /// <summary>
+        /// 阻塞方式下发单段关节 <c>movJ</c>，并等待 CRI 判定“运动完成且到位”。
+        /// </summary>
+        public CommonResponse MovJAndWaitSync(
+            JointPoint target,
+            double speed,
+            double acc,
+            MotionWaitOptions? wait = null,
+            double blend = 25,
+            double[]? coor = null,
+            double[]? tool = null,
+            double? relativeBlend = null)
+        {
+            var response = MovJ(target, speed, acc, blend, coor, tool, relativeBlend)
+                .ConfigureAwait(false).GetAwaiter().GetResult();
+            var options = GetWait(wait);
+            WaitUntilSettledByCri(
+                current => MaxAbsDiff(current.JointPosition, target.Jp) <= options.JointToleranceDeg,
+                "movJ(JointPoint)",
+                options);
+            return response;
+        }
+
+        /// <summary>
+        /// 阻塞方式下发单段笛卡尔 <c>movJ</c>，并等待 CRI 判定“运动完成且到位”。
+        /// </summary>
+        public CommonResponse MovJAndWaitSync(
+            CartesianPoint target,
+            double speed,
+            double acc,
+            MotionWaitOptions? wait = null,
+            double blend = 25,
+            double[]? coor = null,
+            double[]? tool = null,
+            double? relativeBlend = null)
+        {
+            var response = MovJ(target, speed, acc, blend, coor, tool, relativeBlend)
+                .ConfigureAwait(false).GetAwaiter().GetResult();
+            var options = GetWait(wait);
+            WaitUntilSettledByCri(
+                current =>
+                {
+                    var pose = current.TcpPose;
+                    double posErr = Euclidean3Mm(pose, target.Cp);
+                    double oriErr = MaxAbsEulerDiffDeg(pose, target.Cp);
+                    return posErr <= options.CartesianPositionToleranceMm
+                           && oriErr <= options.CartesianOrientationToleranceDeg;
+                },
+                "movJ(CartesianPoint)",
+                options);
+            return response;
+        }
+
+        /// <summary>
+        /// 阻塞方式下发单段笛卡尔 <c>movL</c>，并等待 CRI 判定“运动完成且到位”。
+        /// </summary>
+        public CommonResponse MovLAndWaitSync(
+            CartesianPoint target,
+            double speed,
+            double acc,
+            MotionWaitOptions? wait = null,
+            double blend = 25,
+            double[]? coor = null,
+            double[]? tool = null,
+            double? relativeBlend = null)
+        {
+            var response = MovL(target, speed, acc, blend, coor, tool, relativeBlend)
+                .ConfigureAwait(false).GetAwaiter().GetResult();
+            var options = GetWait(wait);
+            WaitUntilSettledByCri(
+                current =>
+                {
+                    var pose = current.TcpPose;
+                    double posErr = Euclidean3Mm(pose, target.Cp);
+                    double oriErr = MaxAbsEulerDiffDeg(pose, target.Cp);
+                    return posErr <= options.CartesianPositionToleranceMm
+                           && oriErr <= options.CartesianOrientationToleranceDeg;
+                },
+                "movL(CartesianPoint)",
+                options);
+            return response;
+        }
+
+        /// <summary>
+        /// 阻塞方式下发单段关节 <c>movL</c>，并等待 CRI 判定“运动完成且到位”。
+        /// </summary>
+        public CommonResponse MovLAndWaitSync(
+            JointPoint target,
+            double speed,
+            double acc,
+            MotionWaitOptions? wait = null,
+            double blend = 25,
+            double[]? coor = null,
+            double[]? tool = null,
+            double? relativeBlend = null)
+        {
+            var response = MovL(target, speed, acc, blend, coor, tool, relativeBlend)
+                .ConfigureAwait(false).GetAwaiter().GetResult();
+            var options = GetWait(wait);
+            WaitUntilSettledByCri(
+                current => MaxAbsDiff(current.JointPosition, target.Jp) <= options.JointToleranceDeg,
+                "movL(JointPoint)",
+                options);
+            return response;
+        }
+
+        /// <summary>
+        /// 阻塞方式下发路径（<c>Robot/move</c>），等待 CRI 判定“运动停止且数据新鲜”。
+        /// </summary>
+        public CommonResponse MoveAndWaitSync(IReadOnlyList<MoveInstruction> instructions, MotionWaitOptions? wait = null)
+        {
+            var response = Move(instructions).ConfigureAwait(false).GetAwaiter().GetResult();
+            var options = GetWait(wait);
+            var targetReached = BuildMoveTargetReachedPredicate(instructions, options);
+            WaitUntilSettledByCri(targetReached, "move(path)", options);
+            return response;
         }
 
         /// <summary>
@@ -1531,6 +1742,173 @@ namespace Codroid
             await Task.CompletedTask;
         }
 
+        private static MotionWaitOptions GetWait(MotionWaitOptions? wait) => wait ?? new MotionWaitOptions();
+
+        private void EnsureCriFresh(MotionWaitOptions options, string opName)
+        {
+            long ticks = Interlocked.Read(ref _lastCriReceivedUtcTicks);
+            if (ticks <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"{opName} 等待完成失败：尚未收到 CRI 数据。请先 StartCriDataPush 并确认回传正常。");
+            }
+
+            var last = new DateTime(ticks, DateTimeKind.Utc);
+            var age = DateTime.UtcNow - last;
+            if (age > options.CriStaleTimeout)
+            {
+                throw new TimeoutException(
+                    $"{opName} 等待完成失败：CRI 数据陈旧 {age.TotalMilliseconds:F0}ms，阈值 {options.CriStaleTimeout.TotalMilliseconds:F0}ms。");
+            }
+        }
+
+        private void WaitUntilSettledByCri(
+            Func<CriRealTimeData, bool> targetReached,
+            string opName,
+            MotionWaitOptions options)
+        {
+            if (options.SettledSamples <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(options), "SettledSamples 必须大于 0。");
+            }
+            if (options.PollInterval <= TimeSpan.Zero)
+            {
+                throw new ArgumentOutOfRangeException(nameof(options), "PollInterval 必须大于 0。");
+            }
+
+            var sw = Stopwatch.StartNew();
+            int settled = 0;
+            bool hadMotion = false;
+            while (sw.Elapsed <= options.Timeout)
+            {
+                EnsureCriFresh(options, opName);
+                var snapshot = CriData;
+                bool reached = targetReached(snapshot);
+
+                if (snapshot.InMotion)
+                {
+                    hadMotion = true;
+                }
+
+                if (snapshot.CollisionStopped || snapshot.EmergencyStopPressed || snapshot.HasAlarm)
+                {
+                    throw new InvalidOperationException(
+                        $"{opName} 失败：检测到异常状态（CollisionStopped={snapshot.CollisionStopped}, " +
+                        $"EmergencyStopPressed={snapshot.EmergencyStopPressed}, HasAlarm={snapshot.HasAlarm}）。");
+                }
+
+                if (hadMotion && !snapshot.InMotion && !reached)
+                {
+                    throw new InvalidOperationException($"{opName} 失败：运动已停止，但未到达目标点。");
+                }
+
+                bool still = !snapshot.InMotion;
+                if (reached && still)
+                {
+                    settled++;
+                    if (settled >= options.SettledSamples)
+                    {
+                        return;
+                    }
+                }
+                else
+                {
+                    settled = 0;
+                }
+
+                Thread.Sleep(options.PollInterval);
+            }
+
+            var tail = CriData;
+            throw new TimeoutException(
+                $"{opName} 等待完成超时（{options.Timeout.TotalSeconds:F1}s）。最后状态: InMotion={tail.InMotion}, " +
+                $"jp=[{string.Join(", ", tail.JointPosition.Select(v => v.ToString("F3")))}]");
+        }
+
+        private Func<CriRealTimeData, bool> BuildMoveTargetReachedPredicate(
+            IReadOnlyList<MoveInstruction> instructions,
+            MotionWaitOptions options)
+        {
+            ArgumentNullException.ThrowIfNull(instructions);
+            if (instructions.Count == 0)
+            {
+                throw new ArgumentException("至少提供一条运动指令。", nameof(instructions));
+            }
+
+            var last = MotionPointPacker.PackInstruction(instructions[instructions.Count - 1]);
+            if (last.TargetPoint.Jp is { Length: >= 6 } jp)
+            {
+                return current => MaxAbsDiff(current.JointPosition, jp) <= options.JointToleranceDeg;
+            }
+
+            if (last.TargetPoint.Cp is { Length: >= 6 } cp)
+            {
+                return current =>
+                {
+                    var pose = current.TcpPose;
+                    double posErr = Euclidean3Mm(pose, cp);
+                    double oriErr = MaxAbsEulerDiffDeg(pose, cp);
+                    return posErr <= options.CartesianPositionToleranceMm
+                           && oriErr <= options.CartesianOrientationToleranceDeg;
+                };
+            }
+
+            return _ => true;
+        }
+
+        private static double MaxAbsDiff(double[] actual, double[] expected)
+        {
+            if (actual.Length < 6 || expected.Length < 6)
+            {
+                return double.PositiveInfinity;
+            }
+
+            double max = 0;
+            for (int i = 0; i < 6; i++)
+            {
+                double d = Math.Abs(actual[i] - expected[i]);
+                if (d > max)
+                {
+                    max = d;
+                }
+            }
+
+            return max;
+        }
+
+        private static double Euclidean3Mm(double[] actualPose, double[] targetPose)
+        {
+            if (actualPose.Length < 3 || targetPose.Length < 3)
+            {
+                return double.PositiveInfinity;
+            }
+
+            double dx = actualPose[0] - targetPose[0];
+            double dy = actualPose[1] - targetPose[1];
+            double dz = actualPose[2] - targetPose[2];
+            return Math.Sqrt(dx * dx + dy * dy + dz * dz);
+        }
+
+        private static double MaxAbsEulerDiffDeg(double[] actualPose, double[] targetPose)
+        {
+            if (actualPose.Length < 6 || targetPose.Length < 6)
+            {
+                return double.PositiveInfinity;
+            }
+
+            double max = 0;
+            for (int i = 3; i < 6; i++)
+            {
+                double d = Math.Abs(actualPose[i] - targetPose[i]);
+                if (d > max)
+                {
+                    max = d;
+                }
+            }
+
+            return max;
+        }
+
         /// <summary>
         /// 取消 UDP 接收、释放套接字与相关任务引用。
         /// </summary>
@@ -1548,6 +1926,7 @@ namespace Codroid
             finally
             {
                 _criUdpClient = null;
+                Interlocked.Exchange(ref _lastCriReceivedUtcTicks, 0);
                 _criUdpCts?.Dispose();
                 _criUdpCts = null;
                 _criUdpTask = null;
@@ -1582,6 +1961,7 @@ namespace Codroid
                     lock (_criDataLock)
                     {
                         _criData.UpdateFrom(parsed);
+                        Interlocked.Exchange(ref _lastCriReceivedUtcTicks, DateTime.UtcNow.Ticks);
                         snapshot = _criData.Clone();
                     }
 

@@ -57,6 +57,7 @@ namespace Codroid
     /// </summary>
     public enum MoveToKind
     {
+        Stop = -1,
         Home = 0,
         Safe = 1,
         Candle = 2,
@@ -99,6 +100,33 @@ namespace Codroid
     public static class RobotMotionHeartbeat
     {
         public const int RecommendedIntervalMilliseconds = 500;
+    }
+
+    /// <summary>
+    /// 阻塞等待运动完成的判定参数（CRI 新鲜度 + 运动状态 + 位置误差）。
+    /// </summary>
+    public sealed class MotionWaitOptions
+    {
+        /// <summary>整体等待超时（默认 60 秒）。</summary>
+        public TimeSpan Timeout { get; init; } = TimeSpan.FromSeconds(60);
+
+        /// <summary>轮询周期（默认 50ms）。</summary>
+        public TimeSpan PollInterval { get; init; } = TimeSpan.FromMilliseconds(50);
+
+        /// <summary>CRI 数据最大允许陈旧时间（默认 500ms）。</summary>
+        public TimeSpan CriStaleTimeout { get; init; } = TimeSpan.FromMilliseconds(500);
+
+        /// <summary><c>InMotion=false</c> 连续稳定样本数（默认 3）。</summary>
+        public int SettledSamples { get; init; } = 3;
+
+        /// <summary>关节目标判定阈值（最大轴误差，默认 0.2 度）。</summary>
+        public double JointToleranceDeg { get; init; } = 0.2;
+
+        /// <summary>笛卡尔位置判定阈值（欧氏距离，默认 1.0 mm）。</summary>
+        public double CartesianPositionToleranceMm { get; init; } = 1.0;
+
+        /// <summary>笛卡尔姿态判定阈值（欧拉角最大分量误差，默认 1.0 度）。</summary>
+        public double CartesianOrientationToleranceDeg { get; init; } = 1.0;
     }
 
     /// <summary>
