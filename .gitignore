@@ -32,4 +32,4 @@ Thumbs.db
 *.md
 !README.md
 !**/README.md
-!docs/
+!docs/*.md
