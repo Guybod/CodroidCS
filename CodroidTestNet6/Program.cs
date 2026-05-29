@@ -1,23 +1,24 @@
 ﻿// =============================================================================
-// CodroidTestNet8 — 控制台示例程序（net8.0）；net6.0 版见 CodroidTestNet6/Program.cs
+// CodroidTestNet6 — 控制台示例程序（net6.0，与 CodroidTestNet8 逻辑同源、独立副本）
+// 在仓库根目录执行；net8.0 版见 CodroidTestNet8/Program.cs
 // -----------------------------------------------------------------------------
 // 【默认：完整套件】无子命令即跑全部 7 段（含 RobotStatus 订阅 10 秒）
-//   dotnet run --project CodroidTestNet8/CodroidTestNet8.csproj
-//   dotnet run --project CodroidTestNet8/CodroidTestNet8.csproj -- 192.168.8.10     // 指定控制器 IP 跑全套
-//   dotnet run --project CodroidTestNet8/CodroidTestNet8.csproj -- all 192.168.8.10   // 显式写 all，同上
+//   dotnet run --project CodroidTestNet6/CodroidTestNet6.csproj
+//   dotnet run --project CodroidTestNet6/CodroidTestNet6.csproj -- 192.168.8.10     // 指定控制器 IP 跑全套
+//   dotnet run --project CodroidTestNet6/CodroidTestNet6.csproj -- all 192.168.8.10   // 显式写 all，同上
 //   顺序：全局变量 → 正逆解 → IO → 寄存器 → RobotStatus → CRI → S20 运动+CRI
-//   dotnet run --project CodroidTestNet8/CodroidTestNet8.csproj -- … --no-clean     // 仅影响「全局变量」段是否删除 sdk_gv_*
+//   dotnet run --project CodroidTestNet6/CodroidTestNet6.csproj -- … --no-clean     // 仅影响「全局变量」段是否删除 sdk_gv_*
 //
 // 【仅单项】须带子命令：
-//   dotnet run --project CodroidTestNet8/CodroidTestNet8.csproj -- global [ip]
-//   dotnet run --project CodroidTestNet8/CodroidTestNet8.csproj -- cri [ip]
-//   dotnet run --project CodroidTestNet8/CodroidTestNet8.csproj -- kin [ip]
-//   dotnet run --project CodroidTestNet8/CodroidTestNet8.csproj -- io [ip]           // 或 iomanager
-//   dotnet run --project CodroidTestNet8/CodroidTestNet8.csproj -- register [ip]     // 或 reg：寄存器读写
-//   dotnet run --project CodroidTestNet8/CodroidTestNet8.csproj -- robotstatus [ip] // 仅订阅 publish/RobotStatus，收 10 秒推送
-//   dotnet run --project CodroidTestNet8/CodroidTestNet8.csproj -- motion [ip]      // 或 s20 / movecri：四组合+矩形路径
-//   dotnet run --project CodroidTestNet8/CodroidTestNet8.csproj -- robotparam [ip] // 机器人设置 19.x（Get/SaveRobotParameter）
-//   dotnet run --project CodroidTestNet8/CodroidTestNet8.csproj -- syncmotion [ip] // 阻塞运动 AndWait（CRI 新鲜度+到位判定）
+//   dotnet run --project CodroidTestNet6/CodroidTestNet6.csproj -- global [ip]
+//   dotnet run --project CodroidTestNet6/CodroidTestNet6.csproj -- cri [ip]
+//   dotnet run --project CodroidTestNet6/CodroidTestNet6.csproj -- kin [ip]
+//   dotnet run --project CodroidTestNet6/CodroidTestNet6.csproj -- io [ip]           // 或 iomanager
+//   dotnet run --project CodroidTestNet6/CodroidTestNet6.csproj -- register [ip]     // 或 reg：寄存器读写
+//   dotnet run --project CodroidTestNet6/CodroidTestNet6.csproj -- robotstatus [ip] // 仅订阅 publish/RobotStatus，收 10 秒推送
+//   dotnet run --project CodroidTestNet6/CodroidTestNet6.csproj -- motion [ip]      // 或 s20 / movecri：四组合+矩形路径
+//   dotnet run --project CodroidTestNet6/CodroidTestNet6.csproj -- robotparam [ip] // 机器人设置 19.x（Get/SaveRobotParameter）
+//   dotnet run --project CodroidTestNet6/CodroidTestNet6.csproj -- syncmotion [ip] // 阻塞运动 AndWait（CRI 新鲜度+到位判定）
 // =============================================================================
 
 using System;

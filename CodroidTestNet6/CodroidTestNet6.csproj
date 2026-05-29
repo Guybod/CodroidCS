@@ -2,7 +2,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CodroidSDK\CodroidCS.csproj" />
-    <Compile Include="..\CodroidTestNet8\Program.cs" Link="Program.cs" />
   </ItemGroup>
 
   <PropertyGroup>
