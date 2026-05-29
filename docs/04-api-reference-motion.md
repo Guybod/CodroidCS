@@ -442,6 +442,104 @@ var longWait = new MotionWaitOptions
 
 ---
 
+## 8b. Synchronous (Blocking) Motion APIs / 阻塞式运动 API
+
+**⚠️ Prerequisite: You must call `StartCriDataPush` before using any `*Sync` method!**
+
+**⚠️ 前置条件：使用任何 `*Sync` 方法前必须先调用 `StartCriDataPush`！**
+
+The `*Sync` methods send motion commands and then automatically poll CRI data until the robot reaches the target. They block the calling thread until completion or timeout.
+
+`*Sync` 方法发送运动指令后自动轮询 CRI 数据，直到机器人到达目标。它们会阻塞调用线程直到完成或超时。
+
+### Methods / 方法
+
+| Method | Parameters | Description / 描述 |
+|--------|------------|---------------------|
+| `MoveSync` | `instructions, wait?` | Blocking path execution / 阻塞式路径执行 |
+| `MovJSync(JointPoint)` | `target, speed, acc, wait?` | Blocking joint move to joint target / 阻塞式关节运动到关节目标 |
+| `MovJSync(CartesianPoint)` | `target, speed, acc, wait?` | Blocking joint move to Cartesian target / 阻塞式关节运动到笛卡尔目标 |
+| `MovLSync(CartesianPoint)` | `target, speed, acc, wait?` | Blocking linear move to Cartesian target / 阻塞式直线运动到笛卡尔目标 |
+| `MovLSync(JointPoint)` | `target, speed, acc, wait?` | Blocking linear move to joint target / 阻塞式直线运动到关节目标 |
+| `MovCSync` | `middle, target, speed, acc, wait?` | Blocking circular arc move / 阻塞式圆弧运动 |
+| `MovCircleSync` | `middle, target, circleNum, speed, acc, wait?` | Blocking full circle move / 阻塞式整圆运动 |
+| `WaitForCriData` | `timeout` | Wait for first CRI frame / 等待首帧 CRI 数据 |
+
+### Setup / 设置
+
+```csharp
+// 1. Connect and power on / 连接并上电
+var robot = new CodroidClient("192.168.8.136");
+await robot.ConnectRemoteAndSwitchOn();
+
+// 2. ⚠️ MUST start CRI data push first / 必须先启动 CRI 数据推送
+await robot.StartCriDataPush("192.168.8.150", 18888);
+
+// 3. Wait for first CRI frame / 等待首帧 CRI 数据
+await robot.WaitForCriData(5.0);
+
+// 4. Now you can use *Sync methods / 现在可以使用 *Sync 方法
+robot.MovJSync(JointPoint.Degrees([0, 0, 90, 0, 90, 0]), speed: 40, acc: 100);
+```
+
+### Examples / 示例
+
+```csharp
+// Basic usage with default options / 使用默认选项的基本用法
+robot.MovJSync(JointPoint.Degrees([0, 0, 90, 0, 90, 0]), speed: 40, acc: 100);
+robot.MovLSync(CartesianPoint.MmDeg([400, 200, 500, 180, 0, 90]), speed: 150, acc: 500);
+
+// Custom wait options / 自定义等待选项
+var opts = new MotionWaitOptions
+{
+    Timeout = TimeSpan.FromSeconds(30),
+    JointToleranceDeg = 0.5,
+    SettledSamples = 2,
+};
+robot.MovJSync(target, speed: 40, acc: 100, wait: opts);
+
+// Multi-segment path / 多段路径
+var path = new List<MoveInstruction>
+{
+    MoveInstruction.MovJ(jp1, speed: 40, acc: 100),
+    MoveInstruction.MovL(cp1, speed: 150, acc: 500),
+    MoveInstruction.MovL(jp2, speed: 150, acc: 500),
+};
+robot.MoveSync(path);
+
+// Circular arc / 圆弧
+robot.MovCSync(middle, target, speed: 120, acc: 400);
+robot.MovCircleSync(middle, target, circleNum: 1, speed: 120, acc: 400);
+```
+
+### Error Handling / 错误处理
+
+The `*Sync` methods throw exceptions in these cases:
+
+`*Sync` 方法在以下情况抛出异常：
+
+- `TimeoutException` - Motion timed out / 运动超时
+- `InvalidOperationException` - Abnormal state (collision, emergency stop, alarm) / 异常状态（碰撞、急停、报警）
+- `InvalidOperationException` - Motion stopped but target not reached / 运动停止但未到达目标
+
+```csharp
+try
+{
+    robot.MovJSync(target, speed: 40, acc: 100);
+    Console.WriteLine("Reached target");
+}
+catch (TimeoutException ex)
+{
+    Console.WriteLine($"Timeout: {ex.Message}");
+}
+catch (InvalidOperationException ex)
+{
+    Console.WriteLine($"Error: {ex.Message}");
+}
+```
+
+---
+
 ## 9. RobotJogParameters
 
 **A sealed class defining parameters for robot jog (manual) movements.**
