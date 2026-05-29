@@ -90,17 +90,12 @@ public async Task ConnectRemoteAndSwitchOn()
 **EN:** Connects TCP, enters remote mode via auto, then powers on. This is the recommended one-call setup.
 **ZH:** 连接 TCP、经 auto 切换远程模式、然后上电。推荐的一键初始化方法。
 
-```csharp
-await robot.ConnectRemoteAndSwitchOn();
-```
-
-**💡 Recommendation:** After `ConnectRemoteAndSwitchOn`, call `StartCriDataPush` to enable CRI real-time data. This is required for sync motion APIs and recommended for state monitoring.
-
-**💡 推荐：** 调用 `ConnectRemoteAndSwitchOn` 后，立即调用 `StartCriDataPush` 启用 CRI 实时数据。这是阻塞运动 API 的必需步骤，也推荐用于状态监控。
+**Standard connection pattern / 标准连接写法：**
 
 ```csharp
 await robot.ConnectRemoteAndSwitchOn();
-await robot.StartCriDataPush("192.168.8.150", 18888); // Recommended / 推荐
+await robot.StartCriDataPush("192.168.8.150", 18888);
+await robot.WaitForCriData(5.0);
 ```
 
 ---
@@ -117,7 +112,11 @@ public void Disconnect()
 ```csharp
 try
 {
+    // Standard connection pattern / 标准连接写法
     await robot.ConnectRemoteAndSwitchOn();
+    await robot.StartCriDataPush("192.168.8.150", 18888);
+    await robot.WaitForCriData(5.0);
+
     // ... operations ...
 }
 finally

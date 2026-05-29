@@ -114,6 +114,9 @@ try
 {
     // Connect, enter remote mode, and power on
     await robot.ConnectRemoteAndSwitchOn();
+    // ⚠️  Start CRI data push (required for sync motion) 
+    await robot.StartCriDataPush("192.168.8.150", 18888);
+    await robot.WaitForCriData(5.0); //  Start CRI data push (required for sync motion) 
 
     // Read DI port 0
     int di0 = await robot.GetDi(0);
@@ -144,6 +147,9 @@ try
 {
     // 1. Connect
     await robot.ConnectRemoteAndSwitchOn();
+    // ⚠️  Start CRI data push (required for sync motion) 
+    await robot.StartCriDataPush("192.168.8.150", 18888);
+    await robot.WaitForCriData(5.0); //  Start CRI data push (required for sync motion) 
 
     // 2. IO
     int di0 = await robot.GetDi(0);

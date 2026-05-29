@@ -61,11 +61,11 @@ finally
 
 ---
 
-## With CRI Real-time Data / 使用 CRI 实时数据
+## Standard Connection Pattern / 标准连接写法
 
-If you need CRI real-time data (for sync motion, state monitoring, etc.), start CRI push after connecting.
+**Recommended: Always call `StartCriDataPush` + `WaitForCriData` after `ConnectRemoteAndSwitchOn`.**
 
-如果需要 CRI 实时数据（用于阻塞运动、状态监控等），连接后启动 CRI 推送。
+**推荐：连接后立即调用 `StartCriDataPush` + `WaitForCriData`。**
 
 ```csharp
 using Codroid;
@@ -74,16 +74,12 @@ var robot = new CodroidClient("192.168.8.136");
 
 try
 {
-    // 1. Connect / 连接
+    // Standard connection pattern / 标准连接写法
     await robot.ConnectRemoteAndSwitchOn();
-
-    // 2. ⚠️ Start CRI data push (required for sync motion) / 启动 CRI 数据推送（阻塞运动必需）
     await robot.StartCriDataPush("192.168.8.150", 18888);
-
-    // 3. Wait for first CRI frame / 等待首帧 CRI 数据
     await robot.WaitForCriData(5.0);
 
-    // 4. Now you can use sync motion / 现在可以使用阻塞运动
+    // Now you can use all APIs / 现在可以使用所有 API
     robot.MovJSync(JointPoint.Degrees(new[] { 0, 0, 90, 0, 90, 0 }), speed: 40, acc: 100);
 }
 finally
@@ -91,6 +87,13 @@ finally
     robot.Disconnect();
 }
 ```
+
+**Why this pattern? / 为什么这个写法？**
+
+- `StartCriDataPush` enables real-time state monitoring / 启用实时状态监控
+- `WaitForCriData` ensures CRI data is flowing before any motion / 确保 CRI 数据在运动前已就绪
+- Required for `*Sync` blocking motion APIs / `*Sync` 阻塞运动 API 必需
+- Recommended for all use cases / 推荐所有场景使用
 
 ---
 
@@ -105,26 +108,24 @@ var robot = new CodroidClient("192.168.8.136");
 
 try
 {
-    // 1. Connect / 连接
+    // 1. Standard connection pattern / 标准连接写法
     await robot.ConnectRemoteAndSwitchOn();
-
-    // 2. Start CRI data push (recommended after connect) / 启动 CRI 数据推送（推荐连接后立即调用）
     await robot.StartCriDataPush("192.168.8.150", 18888);
     await robot.WaitForCriData(5.0);
 
-    // 3. IO / IO 操作
+    // 2. IO / IO 操作
     int di0 = await robot.GetDi(0);
     await robot.SetDo(10, di0);
 
-    // 4. Register / 寄存器
+    // 3. Register / 寄存器
     RegisterReadValue reg = await robot.GetRegisterValue(49100);
     int value = reg.GetInt32();
     await robot.SetRegisterValue(49100, value + 1);
 
-    // 5. Motion / 运动
+    // 4. Motion / 运动
     await robot.MovJ(JointPoint.Degrees(new[] { 0, 0, 90, 0, 90, 0 }), speed: 40, acc: 100);
 
-    // 6. Blocking motion / 阻塞运动
+    // 5. Blocking motion / 阻塞运动
     robot.MovLSync(
         CartesianPoint.MmDegWithRef(new[] { 400, 0, 300, 180, 0, 0 }, robot.CriData.JointPosition),
         speed: 150, acc: 500);

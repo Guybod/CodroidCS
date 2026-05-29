@@ -116,6 +116,9 @@ try
 {
     // 连接、切换远程、上电
     await robot.ConnectRemoteAndSwitchOn();
+    // ⚠️  启动 CRI 数据推送（阻塞运动必需）
+    await robot.StartCriDataPush("192.168.8.150", 18888);
+    await robot.WaitForCriData(5.0); //  等待首帧
 
     // 读取 DI 端口 0
     int di0 = await robot.GetDi(0);
@@ -146,6 +149,9 @@ try
 {
     // 1. 连接
     await robot.ConnectRemoteAndSwitchOn();
+    // ⚠️  启动 CRI 数据推送（阻塞运动必需）
+    await robot.StartCriDataPush("192.168.8.150", 18888);
+    await robot.WaitForCriData(5.0); //  等待首帧
 
     // 2. IO 操作
     int di0 = await robot.GetDi(0);
