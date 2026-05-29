@@ -28,7 +28,8 @@ Thumbs.db
 # 本地密钥
 .env
 
-# Markdown：仅允许 README.md 入库
+# Markdown：仅允许 README.md 和 docs/ 入库
 *.md
 !README.md
 !**/README.md
+!docs/
