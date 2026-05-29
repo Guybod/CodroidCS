@@ -17,6 +17,7 @@
 - **阻塞式运动 API**（Sync Motion）：
   - `MoveSync`、`MovJSync`（JointPoint / CartesianPoint）、`MovLSync`（CartesianPoint / JointPoint）、`MovCSync`、`MovCircleSync`
   - `MotionWaitOptions` 类：可配置超时、轮询间隔、CRI 过期判定、稳定采样数、关节/笛卡尔容差
+  - **⚠️ 前置条件**：使用 `*Sync` 方法前必须先调用 `StartCriDataPush` 启动 CRI 数据推送
 - **`StopMoveTo()`**：发送 `type=-1` 停止 MoveTo 运动
 - **`WaitForCriData(timeout)`**：阻塞等待首帧 CRI 数据到达
 - `MoveToType.Stop = -1` 枚举值
