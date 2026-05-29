@@ -59,7 +59,9 @@ finally
 }
 ```
 
-### With CRI Real-time Data / 使用 CRI 实时数据
+---
+
+## With CRI Real-time Data / 使用 CRI 实时数据
 
 If you need CRI real-time data (for sync motion, state monitoring, etc.), start CRI push after connecting.
 
@@ -72,13 +74,16 @@ var robot = new CodroidClient("192.168.8.136");
 
 try
 {
+    // 1. Connect / 连接
     await robot.ConnectRemoteAndSwitchOn();
 
-    // ⚠️ Start CRI data push (required for sync motion) / 启动 CRI 数据推送（阻塞运动必需）
+    // 2. ⚠️ Start CRI data push (required for sync motion) / 启动 CRI 数据推送（阻塞运动必需）
     await robot.StartCriDataPush("192.168.8.150", 18888);
-    await robot.WaitForCriData(5.0); // Wait for first frame / 等待首帧
 
-    // Now you can use sync motion / 现在可以使用阻塞运动
+    // 3. Wait for first CRI frame / 等待首帧 CRI 数据
+    await robot.WaitForCriData(5.0);
+
+    // 4. Now you can use sync motion / 现在可以使用阻塞运动
     robot.MovJSync(JointPoint.Degrees(new[] { 0, 0, 90, 0, 90, 0 }), speed: 40, acc: 100);
 }
 finally
