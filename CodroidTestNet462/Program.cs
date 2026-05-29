@@ -829,7 +829,7 @@ internal static class Program
             PrintOk("完成：MovJSync(cart) 到位");
 
             PrintStep(3, "MovLSync(JointPoint) -> zero");
-            robot.MovLSync(zeroJ, speed: 150, acc: 500, wait: wait);
+            robot.MovLSync(homeJ, speed: 150, acc: 500, wait: wait);
             PrintOk("完成：MovLSync(joint) 到位");
 
             PrintStep(4, "MoveSync(path) -> [movJ(joint), movL(cart)]");
