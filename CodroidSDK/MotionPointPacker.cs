@@ -15,7 +15,7 @@ namespace Codroid
         /// </summary>
         public static MovePoint Pack(MovePoint point)
         {
-            ArgumentNullException.ThrowIfNull(point);
+            Polyfills.ThrowIfNull(point);
             MotionPointValidation.ValidateExclusiveJpCp(point, nameof(point));
 
             if (point.Jp is { Length: > 0 })
@@ -56,7 +56,7 @@ namespace Codroid
         /// <summary>打包整条运动指令的 target / middle 路点。</summary>
         public static MoveInstruction PackInstruction(MoveInstruction instruction)
         {
-            ArgumentNullException.ThrowIfNull(instruction);
+            Polyfills.ThrowIfNull(instruction);
             return new MoveInstruction
             {
                 Type = instruction.Type,

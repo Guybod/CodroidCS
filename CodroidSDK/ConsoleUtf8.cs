@@ -1,5 +1,4 @@
 using System;
-using System.Runtime.InteropServices;
 
 namespace Codroid
 {
@@ -13,10 +12,12 @@ namespace Codroid
         /// </summary>
         public static void InitConsoleUtf8()
         {
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+#if !NET462
+            if (!System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows))
             {
                 return;
             }
+#endif
 
             try
             {

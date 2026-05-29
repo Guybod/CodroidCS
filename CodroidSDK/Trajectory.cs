@@ -273,7 +273,7 @@ internal sealed class TrapezoidalProfile : IMotionProfile
         }
         else
             s = 0.5 * A * Ta * Ta + V * (t - Ta);
-        return Math.Clamp(s / D, 0, 1);
+        return MathPolyfills.Clamp(s / D, 0, 1);
     }
 
     public static TrapezoidalProfile From(double D, TrajectoryRequest req)
@@ -347,7 +347,7 @@ internal static class EulerXyz
         const double R2D = 180.0 / Math.PI;
         double w = q.W, x = q.X, y = q.Y, z = q.Z;
         // R = Rz(γ)Ry(β)Rx(α) → R[2][0] = -sin β = 2(xz - wy)
-        double sb = Math.Clamp(2.0 * (w * y - x * z), -1.0, 1.0);
+        double sb = MathPolyfills.Clamp(2.0 * (w * y - x * z), -1.0, 1.0);
         double ry = Math.Asin(sb);
         double rx, rz;
         if (Math.Abs(sb) < 0.999999)

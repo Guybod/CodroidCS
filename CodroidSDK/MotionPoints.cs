@@ -57,7 +57,7 @@ namespace Codroid
 
         public static void ValidateSix(string name, double[]? values)
         {
-            ArgumentNullException.ThrowIfNull(values, name);
+            Polyfills.ThrowIfNull(values, name);
             if (values.Length != AxisCount)
             {
                 throw new ArgumentException($"{name} 长度必须为 {AxisCount}。", name);
@@ -66,7 +66,7 @@ namespace Codroid
 
         public static void ValidateExclusiveJpCp(MovePoint point, string paramName)
         {
-            ArgumentNullException.ThrowIfNull(point, paramName);
+            Polyfills.ThrowIfNull(point, paramName);
             bool hasJp = point.Jp is { Length: > 0 };
             bool hasCp = point.Cp is { Length: > 0 };
             if (hasJp && hasCp)

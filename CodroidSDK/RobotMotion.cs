@@ -80,7 +80,7 @@ namespace Codroid
         /// <summary>规划关节目标（<c>target.jp</c>）。</summary>
         public static MoveToTarget Joint(JointPoint joint)
         {
-            ArgumentNullException.ThrowIfNull(joint);
+            Polyfills.ThrowIfNull(joint);
             MotionPointValidation.ValidateSix(nameof(joint.Jp), joint.Jp);
             return new MoveToTarget { Jp = joint.Jp };
         }
@@ -88,7 +88,7 @@ namespace Codroid
         /// <summary>规划笛卡尔目标（<c>target.cp</c>）。</summary>
         public static MoveToTarget Cartesian(CartesianPoint cartesian)
         {
-            ArgumentNullException.ThrowIfNull(cartesian);
+            Polyfills.ThrowIfNull(cartesian);
             MotionPointValidation.ValidateSix(nameof(cartesian.Cp), cartesian.Cp);
             return new MoveToTarget { Cp = cartesian.Cp };
         }
@@ -161,7 +161,7 @@ namespace Codroid
         /// <summary>关节路点，仅设置 <c>jp</c>。</summary>
         public static MovePoint FromJoint(JointPoint joint)
         {
-            ArgumentNullException.ThrowIfNull(joint);
+            Polyfills.ThrowIfNull(joint);
             MotionPointValidation.ValidateSix(nameof(joint.Jp), joint.Jp);
             return new MovePoint { Jp = joint.Jp };
         }
@@ -169,7 +169,7 @@ namespace Codroid
         /// <summary>笛卡尔路点，设置 <c>cp</c> 与可选 <c>rj</c>（打包时 <c>rj</c> 空则用默认）。</summary>
         public static MovePoint FromCartesian(CartesianPoint cartesian)
         {
-            ArgumentNullException.ThrowIfNull(cartesian);
+            Polyfills.ThrowIfNull(cartesian);
             MotionPointValidation.ValidateSix(nameof(cartesian.Cp), cartesian.Cp);
             if (cartesian.Rj != null)
             {
@@ -356,7 +356,7 @@ namespace Codroid
     {
         public static void ValidateJog(RobotJogParameters p)
         {
-            ArgumentNullException.ThrowIfNull(p);
+            Polyfills.ThrowIfNull(p);
             if (p.Speed is < -1.0 or > 1.0)
             {
                 throw new ArgumentException("点动 speed 须在 [-1, 1] 范围内。", nameof(p));
@@ -418,8 +418,8 @@ namespace Codroid
 
         public static void ValidateMoveInstruction(MoveInstruction instruction)
         {
-            ArgumentNullException.ThrowIfNull(instruction);
-            ArgumentNullException.ThrowIfNull(instruction.TargetPoint);
+            Polyfills.ThrowIfNull(instruction);
+            Polyfills.ThrowIfNull(instruction.TargetPoint);
 
             ValidateNonEmptyFrame(nameof(instruction.Coor), instruction.Coor);
             ValidateNonEmptyFrame(nameof(instruction.Tool), instruction.Tool);
@@ -467,7 +467,7 @@ namespace Codroid
         /// </summary>
         public static JsonElement SerializeMoveInstructions(IReadOnlyList<MoveInstruction> commands)
         {
-            ArgumentNullException.ThrowIfNull(commands);
+            Polyfills.ThrowIfNull(commands);
             if (commands.Count == 0)
             {
                 throw new ArgumentException("至少提供一条运动指令。", nameof(commands));

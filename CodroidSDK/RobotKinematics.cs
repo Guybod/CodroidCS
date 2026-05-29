@@ -37,7 +37,7 @@ namespace Codroid
         /// <exception cref="ArgumentException">长度不是 6。</exception>
         public static void RequireVector6(string paramName, double[] values)
         {
-            ArgumentNullException.ThrowIfNull(values);
+            Polyfills.ThrowIfNull(values);
             if (values.Length != Vector6Length)
             {
                 throw new ArgumentException($"参数须为 {Vector6Length} 个 double（与控制器协议一致）。", paramName);

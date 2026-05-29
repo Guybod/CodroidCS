@@ -9,7 +9,8 @@ Codroid 机器人控制器的 **C# SDK**：通过 TCP/UDP 与 JSON 协议与控�
 ## 环境要求
 
 - [.NET SDK](https://dotnet.microsoft.com/download)：**推荐安装 8.x**（示例程序 `CodroidTest` 面向 `net8.0`）。
-- 类库 `CodroidSDK` 同时编译 **net6.0** 与 **net8.0**，可按需在项目中引用对应目标框架。
+- 类库 `CodroidSDK` 同时编译 **net462**、**net6.0** 与 **net8.0**，可按需在项目中引用对应目标框架。
+- `.NET Framework 4.6.2+` 版本仅支持 **Windows**；Linux / macOS 请使用 `net6.0` / `net8.0`。
 
 本仓库为托管代码，**可在 Linux、Windows、macOS 上开发与运行**，无需单独做平台分支；仅需安装对应系统的 .NET SDK。
 
@@ -20,7 +21,9 @@ Codroid 机器人控制器的 **C# SDK**：通过 TCP/UDP 与 JSON 协议与控�
 | `CodroidSDK/` | SDK 类库（NuGet 包 id：`Codroidsdk`，构建时可生成 `.nupkg`） |
 | `CodroidTestNet8/` | 控制台示例程序（net8.0），演示各类 API 用法 |
 | `CodroidTestNet6/` | 控制台示例程序（net6.0），复用同一 `Program.cs` |
+| `CodroidTestNet462/` | 控制台示例程序（net462），面向 .NET Framework 4.6.2+ |
 | `CodroidCRITest/` | CRI 实时控制示例程序，演示轨迹规划与 UDP CommandData 周期下发 |
+| `CodroidCRITestNet462/` | CRI 实时控制示例程序（net462），面向 .NET Framework 4.6.2+ |
 
 ## 构建 SDK
 
@@ -28,7 +31,7 @@ Codroid 机器人控制器的 **C# SDK**：通过 TCP/UDP 与 JSON 协议与控�
 dotnet build CodroidSDK/CodroidCS.csproj -c Release
 ```
 
-生成的程序集在 `CodroidSDK/bin/Release/net6.0/` 与 `net8.0/`（若单独指定 `-f net8.0` 则仅该框架）。若启用 `GeneratePackageOnBuild`，会在输出目录生成 NuGet 包。
+生成的程序集在 `CodroidSDK/bin/Release/net462/`、`net6.0/` 与 `net8.0/`（若单独指定 `-f net8.0` 则仅该框架）。若启用 `GeneratePackageOnBuild`，会在输出目录生成 NuGet 包。
 
 ## 运行示例程序
 
@@ -151,11 +154,10 @@ await robot.Move(new[]
 
 ### 阻塞与非阻塞
 
-- 非阻塞（返回 `Task`）：`MovJ` / `MovL` / `Move`
-- 阻塞到“命令响应”：`MovJSync` / `MovLSync`
-- 阻塞到“运动完成且到位（CRI 判定）”：`MovJAndWaitSync` / `MovLAndWaitSync` / `MoveAndWaitSync` / `MoveSync`
+- 非阻塞（返回 `Task`）：`MovJ` / `MovL` / `MovC` / `MovCircle` / `Move`
+- 阻塞到“运动完成且到位（CRI 判定，成功返回 `true`，异常直接抛出）”：`MovJSync` / `MovLSync` / `MovCSync` / `MovCircleSync` / `MoveSync`
 
-`AndWait` 系列使用 `MotionWaitOptions` 判定完成：CRI 数据新鲜度、`InMotion=false` 连续样本、目标误差阈值（关节或笛卡尔）。
+`*Sync` 系列须先 `StartCriDataPush`，使用 `MotionWaitOptions` 判定完成：CRI 数据新鲜度、`InMotion=false` 连续样本、目标误差阈值（关节或笛卡尔）。
 
 ```csharp
 var wait = new MotionWaitOptions
@@ -167,8 +169,8 @@ var wait = new MotionWaitOptions
     CartesianOrientationToleranceDeg = 1.5
 };
 
-robot.MovJAndWaitSync(JointPoint.Degrees(new[] { 0, 0, 90, 0, 90, 0 }), 40, 100, wait);
-robot.MovJAndWaitSync(CartesianPoint.MmDegWithRef(pose, robot.CriData.JointPosition), 40, 100, wait);
+robot.MovJSync(JointPoint.Degrees(new[] { 0, 0, 90, 0, 90, 0 }), 40, 100, wait);
+robot.MovJSync(CartesianPoint.MmDegWithRef(pose, robot.CriData.JointPosition), 40, 100, wait);
 ```
 
 ## CRI 实时数据与实时控制
@@ -215,6 +217,21 @@ finally
 ```
 
 CRI UDP 线上单位是 m/rad，SDK 对外统一使用 mm/deg；`CriRealtimeDispatcher` 默认会在发送前把 mm/deg 转回 m/rad。
+
+## .NET Framework 4.6.2+ 支持
+
+从 2.2.0 版本开始，SDK 新增 `.NET Framework 4.6.2+` 目标，适用于 WinForms / WPF / 老 .NET Framework 项目。
+
+```xml
+<PackageReference Include="Codroidsdk" Version="2.2.0" />
+```
+
+注意事项：
+
+- `.NET Framework` 版本仅支持 **Windows**。
+- 推荐 `.NET Framework 4.7.2` 或 `4.8`；最低支持 `4.6.2`，不承诺 `4.6.0` / `4.6.1`。
+- `net462` 下 CRI 实时控制默认频率为 **250Hz**（`periodMs=4`），可满足常规应用场景。
+- `periodMs != 4`、500Hz、1000Hz 不作为 `net462` 默认 SLA，需要现场压测验证。
 
 ## 仓库地址
 

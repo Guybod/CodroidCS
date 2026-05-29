@@ -30,7 +30,7 @@ namespace Codroid
         /// <exception cref="ArgumentException"><paramref name="packet"/> 长度不是 <see cref="PacketLength"/>。</exception>
         public static CriRealTimeData Parse(byte[] packet)
         {
-            ArgumentNullException.ThrowIfNull(packet);
+            Polyfills.ThrowIfNull(packet);
             if (packet.Length != PacketLength)
             {
                 throw new ArgumentException($"CRI 包长度必须为 {PacketLength} 字节，实际为 {packet.Length}。", nameof(packet));

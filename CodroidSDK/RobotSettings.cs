@@ -88,7 +88,7 @@ namespace Codroid
 
         public static void ValidateFrameIdMatches(int frameId, RobotFrame frame)
         {
-            ArgumentNullException.ThrowIfNull(frame);
+            Polyfills.ThrowIfNull(frame);
             if (frame.Id != frameId)
             {
                 throw new ArgumentException(
@@ -99,7 +99,7 @@ namespace Codroid
 
         public static void ValidateFrameIdMatches(int frameId, RobotPayloadFrame frame)
         {
-            ArgumentNullException.ThrowIfNull(frame);
+            Polyfills.ThrowIfNull(frame);
             if (frame.Id != frameId)
             {
                 throw new ArgumentException(
@@ -169,7 +169,7 @@ namespace Codroid
             Func<T, int> idSelector,
             Action<T> validateReservedZero)
         {
-            ArgumentNullException.ThrowIfNull(frames, paramName);
+            Polyfills.ThrowIfNull(frames, paramName);
             if (frames.Count != MaxSlotId + 1)
             {
                 throw new ArgumentException(
@@ -180,7 +180,7 @@ namespace Codroid
             var seen = new HashSet<int>();
             foreach (var frame in frames)
             {
-                ArgumentNullException.ThrowIfNull(frame);
+                Polyfills.ThrowIfNull(frame);
                 int id = idSelector(frame);
                 if (id is < MinSlotId or > MaxSlotId)
                 {

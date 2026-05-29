@@ -112,7 +112,7 @@ namespace Codroid
         /// </summary>
         public static string ToWireString(object value)
         {
-            ArgumentNullException.ThrowIfNull(value);
+            Polyfills.ThrowIfNull(value);
 
             return value switch
             {

@@ -18,7 +18,7 @@
 //   dotnet run --project CodroidTestNet6/CodroidTestNet6.csproj -- robotstatus [ip] // 仅订阅 publish/RobotStatus，收 10 秒推送
 //   dotnet run --project CodroidTestNet6/CodroidTestNet6.csproj -- motion [ip]      // 或 s20 / movecri：四组合+矩形路径
 //   dotnet run --project CodroidTestNet6/CodroidTestNet6.csproj -- robotparam [ip] // 机器人设置 19.x（Get/SaveRobotParameter）
-//   dotnet run --project CodroidTestNet6/CodroidTestNet6.csproj -- syncmotion [ip] // 阻塞运动 AndWait（CRI 新鲜度+到位判定）
+//   dotnet run --project CodroidTestNet6/CodroidTestNet6.csproj -- syncmotion [ip] // 阻塞运动 Sync（CRI 新鲜度+到位判定）
 // =============================================================================
 
 using System;
@@ -781,7 +781,7 @@ internal static class Program
     }
 
     /// <summary>
-    /// 阻塞运动演示：使用 AndWaitSync API（CRI 新鲜度 + InMotion + 目标到位）判定完成。
+    /// 阻塞运动演示：使用 *Sync API（CRI 新鲜度 + InMotion + 目标到位）判定完成。
     /// </summary>
     private static async Task RunSyncMotionTest(string robotIp)
     {
@@ -789,9 +789,9 @@ internal static class Program
         const int localUdpPort = 18888;
 
         var robot = new CodroidClient(robotIp);
-        PrintBanner($"阻塞运动测试（AndWait）| {robotIp}", ConsoleColor.White);
+        PrintBanner($"阻塞运动测试（Sync）| {robotIp}", ConsoleColor.White);
         Console.WriteLine($"  将启动 CRI: {localUdpIp}:{localUdpPort}；请按现场修改 Program.cs 常量。");
-        Console.WriteLine("  流程：MovJAndWaitSync(joint) → MovJAndWaitSync(cart) → MovLAndWaitSync(joint) → MoveSync(path)");
+        Console.WriteLine("  流程：MovJSync(joint) → MovJSync(cart) → MovLSync(joint) → MoveSync(path)");
         Console.WriteLine();
 
         try
@@ -820,17 +820,17 @@ internal static class Program
             var refJ = robot.CriData.JointPosition;
             var p1Cart = CartesianPoint.MmDegWithRef(p1, refJ);
 
-            PrintStep(1, "MovJAndWaitSync(JointPoint) -> home");
-            robot.MovJAndWaitSync(homeJ, speed: 40, acc: 100, wait: wait);
-            PrintOk("完成：MovJAndWaitSync(joint) 到位");
+            PrintStep(1, "MovJSync(JointPoint) -> home");
+            robot.MovJSync(homeJ, speed: 40, acc: 100, wait: wait);
+            PrintOk("完成：MovJSync(joint) 到位");
 
-            PrintStep(2, "MovJAndWaitSync(CartesianPoint) -> P1");
-            robot.MovJAndWaitSync(p1Cart, speed: 40, acc: 100, wait: wait);
-            PrintOk("完成：MovJAndWaitSync(cart) 到位");
+            PrintStep(2, "MovJSync(CartesianPoint) -> P1");
+            robot.MovJSync(p1Cart, speed: 40, acc: 100, wait: wait);
+            PrintOk("完成：MovJSync(cart) 到位");
 
-            PrintStep(3, "MovLAndWaitSync(JointPoint) -> zero");
-            robot.MovLAndWaitSync(zeroJ, speed: 150, acc: 500, wait: wait);
-            PrintOk("完成：MovLAndWaitSync(joint) 到位");
+            PrintStep(3, "MovLSync(JointPoint) -> zero");
+            robot.MovLSync(zeroJ, speed: 150, acc: 500, wait: wait);
+            PrintOk("完成：MovLSync(joint) 到位");
 
             PrintStep(4, "MoveSync(path) -> [movJ(joint), movL(cart)]");
             var refPath = robot.CriData.JointPosition;

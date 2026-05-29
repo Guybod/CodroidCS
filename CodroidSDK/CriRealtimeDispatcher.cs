@@ -1,6 +1,7 @@
 using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -90,11 +91,16 @@ public sealed class CriRealtimeDispatcher : IDisposable
         {
             double v = position6[i];
             if (_convertToSi) v = ToSi(v, i, space);
-            BinaryPrimitives.WriteDoubleLittleEndian(buffer.AsSpan(PositionOffset + i * 8, 8), v);
+            WriteDoubleLittleEndian(buffer, PositionOffset + i * 8, v);
         }
         buffer[TypeOffset] = (byte)(space == TrajectorySpace.Joint ? 0 : 1);
 
+#if NET462
+        _udp.Send(buffer, CommandPacketLength, _target);
+        await Task.CompletedTask;
+#else
         await _udp.SendAsync(buffer.AsMemory(0, CommandPacketLength), _target, ct).ConfigureAwait(false);
+#endif
     }
 
     /// <summary>
@@ -113,8 +119,8 @@ public sealed class CriRealtimeDispatcher : IDisposable
     /// <exception cref="OperationCanceledException"><paramref name="ct"/> 已取消。</exception>
     /// <exception cref="SocketException">底层 UDP 发送失败。</exception>
     /// <remarks>
-    /// 第一帧立即发送，之后每个 <see cref="PeriodicTimer"/> 滴答发一帧；如某帧计算/发送耗时超过周期，
-    /// 后续帧会立即追发以追平节奏（<see cref="PeriodicTimer"/> 默认行为）。
+    /// 第一帧立即发送，之后每个周期滴答发一帧；如某帧计算/发送耗时超过周期，
+    /// 后续帧会立即追发以追平节奏。
     /// </remarks>
     public async Task SendTrajectory(
         IEnumerable<TrajectoryPoint> trajectory,
@@ -126,6 +132,9 @@ public sealed class CriRealtimeDispatcher : IDisposable
         if (trajectory == null) throw new ArgumentNullException(nameof(trajectory));
         if (periodMs is <= 0 or > 1000) throw new ArgumentOutOfRangeException(nameof(periodMs), "periodMs 必须在 (0, 1000] ms。");
 
+#if NET462
+        await SendTrajectoryNet462(trajectory, space, periodMs, ct).ConfigureAwait(false);
+#else
         using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(periodMs));
         bool first = true;
         foreach (var point in trajectory)
@@ -139,7 +148,105 @@ public sealed class CriRealtimeDispatcher : IDisposable
             first = false;
             await SendCommand(point.Position, space, ct).ConfigureAwait(false);
         }
+#endif
     }
+
+#if NET462
+    private async Task SendTrajectoryNet462(
+        IEnumerable<TrajectoryPoint> trajectory,
+        TrajectorySpace space,
+        int periodMs,
+        CancellationToken ct)
+    {
+        if (periodMs != 4)
+        {
+            Trace.TraceWarning(
+                $"[Codroidsdk][net462] CRI SendTrajectory periodMs={periodMs} is outside the default 250Hz SLA. " +
+                "The default supported period is 4ms. Higher-frequency or custom-period control requires on-site validation.");
+        }
+
+        double periodMsActual = periodMs;
+        var stopwatch = Stopwatch.StartNew();
+        long ticksPerPeriod = (long)(Stopwatch.Frequency * periodMsActual / 1000.0);
+        long nextTick = stopwatch.ElapsedTicks;
+
+        int frameCount = 0;
+        double sumPeriodMs = 0;
+        double maxPeriodMs = 0;
+        int overruns = 0;          // 超过 6ms
+        int consecutiveMiss = 0;   // 连续丢周期
+        int maxConsecutiveMiss = 0;
+        int udpExceptions = 0;
+
+        long prevTick = stopwatch.ElapsedTicks;
+
+        foreach (var point in trajectory)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            try
+            {
+                await SendCommand(point.Position, space, ct).ConfigureAwait(false);
+            }
+            catch (SocketException)
+            {
+                udpExceptions++;
+                throw;
+            }
+
+            frameCount++;
+
+            long now = stopwatch.ElapsedTicks;
+            double actualPeriodMs = (now - prevTick) * 1000.0 / Stopwatch.Frequency;
+            prevTick = now;
+
+            if (frameCount > 1)
+            {
+                sumPeriodMs += actualPeriodMs;
+                if (actualPeriodMs > maxPeriodMs) maxPeriodMs = actualPeriodMs;
+                if (actualPeriodMs > 6.0)
+                {
+                    overruns++;
+                    consecutiveMiss++;
+                    if (consecutiveMiss > maxConsecutiveMiss) maxConsecutiveMiss = consecutiveMiss;
+                }
+                else
+                {
+                    consecutiveMiss = 0;
+                }
+            }
+
+            nextTick += ticksPerPeriod;
+            long remainingTicks = nextTick - stopwatch.ElapsedTicks;
+
+            if (remainingTicks > 0)
+            {
+                double remainingMs = remainingTicks * 1000.0 / Stopwatch.Frequency;
+                if (remainingMs > 1.5)
+                {
+                    Thread.Sleep(1);
+                }
+                else
+                {
+                    Thread.SpinWait(50);
+                }
+            }
+        }
+
+        double avgPeriodMs = frameCount > 1 ? sumPeriodMs / (frameCount - 1) : 0;
+        double elapsedSec = stopwatch.ElapsedMilliseconds / 1000.0;
+
+        Trace.TraceInformation(
+            $"[Codroidsdk][net462] CRI SendTrajectory statistics:\n" +
+            $"  Duration: {elapsedSec:F2}s\n" +
+            $"  Frames sent: {frameCount}\n" +
+            $"  Average period: {avgPeriodMs:F3}ms\n" +
+            $"  Max period: {maxPeriodMs:F3}ms\n" +
+            $"  Overruns (>6ms): {overruns}\n" +
+            $"  Max consecutive overruns: {maxConsecutiveMiss}\n" +
+            $"  UDP exceptions: {udpExceptions}");
+    }
+#endif
 
     private static double ToSi(double value, int index, TrajectorySpace space)
     {
@@ -148,6 +255,17 @@ public sealed class CriRealtimeDispatcher : IDisposable
         if (space == TrajectorySpace.Joint)
             return value * Deg2Rad;
         return index < 3 ? value * Mm2M : value * Deg2Rad;
+    }
+
+    private static void WriteDoubleLittleEndian(byte[] buffer, int offset, double value)
+    {
+#if NET462
+        byte[] bytes = BitConverter.GetBytes(value);
+        if (!BitConverter.IsLittleEndian) Array.Reverse(bytes);
+        Array.Copy(bytes, 0, buffer, offset, 8);
+#else
+        BinaryPrimitives.WriteDoubleLittleEndian(buffer.AsSpan(offset, 8), value);
+#endif
     }
 
     private void EnsureNotDisposed()

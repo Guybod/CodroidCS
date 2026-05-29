@@ -112,7 +112,7 @@ public class CriRealTimeData
     /// <exception cref="ArgumentNullException"><paramref name="source"/> 为 null。</exception>
     public void UpdateFrom(CriRealTimeData source)
     {
-        ArgumentNullException.ThrowIfNull(source);
+        Polyfills.ThrowIfNull(source);
         TimestampMs = source.TimestampMs;
         Status1Raw = source.Status1Raw;
         Status2Raw = source.Status2Raw;

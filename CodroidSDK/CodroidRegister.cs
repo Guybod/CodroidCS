@@ -69,7 +69,7 @@ namespace Codroid
                     }
 
                     var d = v.GetDouble();
-                    if (double.IsFinite(d)
+                    if (DoublePolyfills.IsFinite(d)
                         && Math.Abs(d - Math.Truncate(d)) < 1e-9
                         && d >= int.MinValue
                         && d <= int.MaxValue)
@@ -182,7 +182,7 @@ namespace Codroid
     {
         public static void ValidateAddresses(IReadOnlyList<int> addresses)
         {
-            ArgumentNullException.ThrowIfNull(addresses);
+            Polyfills.ThrowIfNull(addresses);
             if (addresses.Count == 0)
             {
                 throw new ArgumentException("至少指定一个寄存器地址。", nameof(addresses));

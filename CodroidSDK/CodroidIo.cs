@@ -95,7 +95,7 @@ namespace Codroid
         /// <exception cref="ArgumentException"><paramref name="pins"/> 为空。</exception>
         public static JsonElement BuildGetQuery(IReadOnlyList<(string Type, int Port)> pins)
         {
-            ArgumentNullException.ThrowIfNull(pins);
+            Polyfills.ThrowIfNull(pins);
             if (pins.Count == 0)
             {
                 throw new ArgumentException("至少指定一个 IO 点。", nameof(pins));

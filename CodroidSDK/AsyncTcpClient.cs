@@ -1,7 +1,8 @@
-using System.Net.Sockets;
-using System.Text;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
+using System.Net.Sockets;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -27,6 +28,9 @@ namespace Codroid
         /// <summary>串行化 TCP 发送，避免 <see cref="SendCommand"/> 与订阅帧交错写入。</summary>
         private readonly SemaphoreSlim _tcpWriteGate = new(1, 1);
 
+        private Task? _receiveTask;
+        private volatile bool _disconnecting;
+
         /// <summary>
         /// 与控制器建立 TCP 连接并启动后台接收任务，用于持续解析下行 JSON。
         /// </summary>
@@ -38,9 +42,10 @@ namespace Codroid
         /// <exception cref="ObjectDisposedException">底层 <see cref="TcpClient"/> 已释放。</exception>
         public async Task Connect(string ip, int port)
         {
+            _disconnecting = false;
             await _client.ConnectAsync(ip, port);
             _stream = _client.GetStream();
-            _ = Task.Run(ReceiveWorker);
+            _receiveTask = Task.Run(ReceiveWorker);
         }
 
         /// <summary>
@@ -160,7 +165,7 @@ namespace Codroid
                 throw new ArgumentException("主题 ty 不能为空。", nameof(topicTy));
             }
 
-            ArgumentNullException.ThrowIfNull(handler);
+            Polyfills.ThrowIfNull(handler);
 
             lock (_publishHandlerLock)
             {
@@ -194,7 +199,7 @@ namespace Codroid
                 throw new ArgumentException("主题 ty 不能为空。", nameof(topicTy));
             }
 
-            ArgumentNullException.ThrowIfNull(handler);
+            Polyfills.ThrowIfNull(handler);
 
             lock (_publishHandlerLock)
             {
@@ -281,10 +286,24 @@ namespace Codroid
                     }
                 }
             }
+            catch (Exception ex) when (IsExpectedReceiveShutdown(ex))
+            {
+                // Disconnect 关闭流后 ReadAsync 结束，属正常路径。
+            }
             catch (Exception ex)
             {
                 Console.WriteLine($"[接收线程异常] {ex.Message}");
             }
+        }
+
+        private bool IsExpectedReceiveShutdown(Exception ex)
+        {
+            if (_disconnecting)
+            {
+                return true;
+            }
+
+            return ex is ObjectDisposedException or IOException;
         }
 
         /// <summary>
@@ -380,14 +399,54 @@ namespace Codroid
         /// </summary>
         public void Disconnect()
         {
+            _disconnecting = true;
+
             _publishWireSent.Clear();
             lock (_publishHandlerLock)
             {
                 _publishHandlers.Clear();
             }
 
-            _stream?.Close();
-            _client.Close();
+            foreach (int id in _promises.Keys)
+            {
+                if (_promises.TryRemove(id, out var promise))
+                {
+                    promise.TrySetCanceled();
+                }
+            }
+
+            try
+            {
+                _stream?.Close();
+            }
+            catch (IOException)
+            {
+                // ignore
+            }
+
+            try
+            {
+                _client.Close();
+            }
+            catch (IOException)
+            {
+                // ignore
+            }
+
+            _stream = null;
+
+            Task? receiveTask = _receiveTask;
+            if (receiveTask != null)
+            {
+                try
+                {
+                    receiveTask.Wait(2000);
+                }
+                catch (AggregateException)
+                {
+                    // ignore
+                }
+            }
         }
     }
 }

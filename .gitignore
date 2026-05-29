@@ -28,8 +28,7 @@ Thumbs.db
 # 本地密钥
 .env
 
-# 临时协议/设计文档（当前阶段不入库）
-AGENTS.md
-SDK_API_AND_DESIGN.md
-PROTOCOL_LINE_BY_LINE.md
-TRAJECTORY_ALGORITHM.md
+# Markdown：仅允许 README.md 入库
+*.md
+!README.md
+!**/README.md
