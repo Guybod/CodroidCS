@@ -340,7 +340,101 @@ Console.WriteLine($"TCP Pose: [{string.Join(", ", data.TcpPose)}]");
 
 ---
 
-## 8. Complete CRI Control Flow Example / 完整 CRI 控制流程示例
+## 8. Accessing CRI Real-time Data / 访问 CRI 实时数据
+
+There are **two ways** to access CRI real-time data after calling `StartCriDataPush`.
+
+调用 `StartCriDataPush` 后，有**两种方式**访问 CRI 实时数据。
+
+### Method 1: CriData Property (Polling) / 方式一：CriData 属性（轮询）
+
+Read the latest cached snapshot at any time. This is a thread-safe deep clone.
+
+随时读取最新的缓存快照。这是线程安全的深拷贝。
+
+```csharp
+// Start CRI push first / 先启动 CRI 推送
+await robot.StartCriDataPush("192.168.8.150", 18888);
+
+// Read latest data anytime / 随时读取最新数据
+CriRealTimeData data = robot.CriData;
+
+if (data != null)
+{
+    Console.WriteLine($"关节角度: [{string.Join(", ", data.JointPosition)}]");
+    Console.WriteLine($"TCP 位姿: [{string.Join(", ", data.TcpPose)}]");
+    Console.WriteLine($"是否运动中: {data.InMotion}");
+    Console.WriteLine($"碰撞停止: {data.CollisionStopped}");
+    Console.WriteLine($"急停按下: {data.EmergencyStopPressed}");
+    Console.WriteLine($"有报警: {data.HasAlarm}");
+}
+```
+
+**Use cases / 适用场景：**
+- Sync motion APIs (internal polling) / 阻塞运动 API（内部轮询）
+- Periodic state checking / 定期状态检查
+- One-time position read / 一次性位置读取
+
+### Method 2: CriDataReceived Event (Push) / 方式二：CriDataReceived 事件（推送）
+
+Register an event handler that fires on every received CRI frame.
+
+注册事件处理程序，每收到一帧 CRI 数据自动触发。
+
+```csharp
+// Register event handler BEFORE starting push / 在启动推送前注册事件处理程序
+robot.CriDataReceived += (CriRealTimeData data) =>
+{
+    Console.WriteLine($"关节角度: [{string.Join(", ", data.JointPosition)}]");
+    Console.WriteLine($"TCP 位姿: [{string.Join(", ", data.TcpPose)}]");
+    Console.WriteLine($"是否运动中: {data.InMotion}");
+};
+
+// Then start push / 然后启动推送
+await robot.StartCriDataPush("192.168.8.150", 18888);
+```
+
+**Use cases / 适用场景：**
+- Real-time monitoring / 实时监控
+- Data logging / 数据记录
+- Event-driven workflows / 事件驱动工作流
+
+### Comparison / 对比
+
+| Feature / 特性 | `CriData` Property / 属性 | `CriDataReceived` Event / 事件 |
+|----------------|---------------------------|--------------------------------|
+| Access pattern / 访问模式 | Pull (poll when needed) / 拉取（需要时轮询） | Push (automatic callback) / 推送（自动回调） |
+| Thread safety / 线程安全 | ✅ Deep clone / 深拷贝 | ✅ Runs on receive thread / 在接收线程运行 |
+| Missed frames / 丢失帧 | May miss between reads / 读取间隔可能丢帧 | No loss / 不丢帧 |
+| Complexity / 复杂度 | Simple / 简单 | Requires event handler / 需要事件处理程序 |
+| Best for / 最适合 | Sync motion, one-time reads / 阻塞运动、一次性读取 | Monitoring, logging / 监控、记录 |
+
+### Combined Example / 组合示例
+
+```csharp
+var robot = new CodroidClient("192.168.8.136");
+
+// Register event for continuous monitoring / 注册事件用于持续监控
+robot.CriDataReceived += (data) =>
+{
+    if (data.HasAlarm)
+        Console.WriteLine($"⚠️ 报警: 错误码 {data.CriErrorCode}");
+};
+
+await robot.ConnectRemoteAndSwitchOn();
+await robot.StartCriDataPush("192.168.8.150", 18888);
+
+// Use CriData for sync motion / 使用 CriData 进行阻塞运动
+robot.MovJSync(JointPoint.Degrees(new[] { 0, 0, 90, 0, 90, 0 }), speed: 40, acc: 100);
+
+// Use CriData for one-time read / 使用 CriData 进行一次性读取
+var current = robot.CriData;
+Console.WriteLine($"当前位置: [{string.Join(", ", current.JointPosition)}]");
+```
+
+---
+
+## 9. Complete CRI Control Flow Example / 完整 CRI 控制流程示例
 
 This example demonstrates the full CRI control workflow: starting data reception, reading the current position, generating a trajectory, sending commands via the real-time dispatcher, and cleanly shutting down.
 本示例展示完整的 CRI 控制流程：启动数据接收、读取当前位置、生成轨迹、通过实时调度器发送命令，以及安全关闭。
