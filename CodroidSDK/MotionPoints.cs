@@ -58,7 +58,7 @@ namespace Codroid
         public static void ValidateSix(string name, double[]? values)
         {
             Polyfills.ThrowIfNull(values, name);
-            if (values.Length != AxisCount)
+            if (values!.Length != AxisCount)
             {
                 throw new ArgumentException($"{name} 长度必须为 {AxisCount}。", name);
             }

@@ -335,7 +335,7 @@ namespace Codroid
                 }
 
                 string? ty = tyEl.GetString();
-                if (string.IsNullOrEmpty(ty))
+                if (string.IsNullOrWhiteSpace(ty))
                 {
                     return;
                 }
@@ -348,12 +348,12 @@ namespace Codroid
 
                 var notification = new PublishNotification
                 {
-                    Ty = ty,
+                    Ty = ty!,
                     Db = dbClone,
                     RawJson = json
                 };
 
-                InvokePublishHandlers(ty, notification);
+                InvokePublishHandlers(ty!, notification);
             }
             catch (Exception ex)
             {

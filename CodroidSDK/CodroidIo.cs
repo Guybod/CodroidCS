@@ -145,17 +145,20 @@ namespace Codroid
                 return 0;
             }
 
-            if (s == "1" || s.Equals("true", StringComparison.OrdinalIgnoreCase))
+            // After null check, s is guaranteed non-null
+            var value = s!;
+
+            if (value == "1" || value.Equals("true", StringComparison.OrdinalIgnoreCase))
             {
                 return 1;
             }
 
-            if (s == "0" || s.Equals("false", StringComparison.OrdinalIgnoreCase))
+            if (value == "0" || value.Equals("false", StringComparison.OrdinalIgnoreCase))
             {
                 return 0;
             }
 
-            if (double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var d))
+            if (double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var d))
             {
                 return d != 0.0 ? 1 : 0;
             }
