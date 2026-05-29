@@ -1,5 +1,15 @@
 # Codroid C# SDK 版本说明
 
+## v2.1.3（2026-05-29）
+
+### 修复
+
+- 修复 `AsyncTcpClient.cs` 中 `InvokePublishHandlers` 参数 `ty` 的空引用警告
+- 修复 `MotionPoints.cs` 中 `ValidateSix` 方法 `values` 的空引用警告
+- 修复 `CodroidIo.cs` 中 `ParseStringZeroOne` 方法 `s` 的空引用警告
+
+---
+
 ## v2.1.2（2026-05-29）
 
 ### 新增
