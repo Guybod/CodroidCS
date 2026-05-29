@@ -9,6 +9,12 @@ new CodroidClient(ip)
    Connect()  ──or──  ConnectRemoteAndSwitchOn()
         │
         ▼
+   StartCriDataPush(localIp, port)  ← recommended / 推荐
+        │
+        ▼
+   WaitForCriData()  ← if using sync motion / 如果使用阻塞运动
+        │
+        ▼
    [ IO / Register / Motion / CRI ... ]
         │
         ▼
@@ -21,6 +27,10 @@ var robot = new CodroidClient("192.168.8.136");
 try
 {
     await robot.ConnectRemoteAndSwitchOn();
+
+    // Start CRI data push (recommended after connect) / 启动 CRI 数据推送（推荐连接后立即调用）
+    await robot.StartCriDataPush("192.168.8.150", 18888);
+
     // ... use robot ...
 }
 finally

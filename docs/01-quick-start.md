@@ -59,6 +59,34 @@ finally
 }
 ```
 
+### With CRI Real-time Data / 使用 CRI 实时数据
+
+If you need CRI real-time data (for sync motion, state monitoring, etc.), start CRI push after connecting.
+
+如果需要 CRI 实时数据（用于阻塞运动、状态监控等），连接后启动 CRI 推送。
+
+```csharp
+using Codroid;
+
+var robot = new CodroidClient("192.168.8.136");
+
+try
+{
+    await robot.ConnectRemoteAndSwitchOn();
+
+    // ⚠️ Start CRI data push (required for sync motion) / 启动 CRI 数据推送（阻塞运动必需）
+    await robot.StartCriDataPush("192.168.8.150", 18888);
+    await robot.WaitForCriData(5.0); // Wait for first frame / 等待首帧
+
+    // Now you can use sync motion / 现在可以使用阻塞运动
+    robot.MovJSync(JointPoint.Degrees(new[] { 0, 0, 90, 0, 90, 0 }), speed: 40, acc: 100);
+}
+finally
+{
+    robot.Disconnect();
+}
+```
+
 ---
 
 ## Complete Workflow Example / 完整工作流示例
@@ -75,19 +103,23 @@ try
     // 1. Connect / 连接
     await robot.ConnectRemoteAndSwitchOn();
 
-    // 2. IO / IO 操作
+    // 2. Start CRI data push (recommended after connect) / 启动 CRI 数据推送（推荐连接后立即调用）
+    await robot.StartCriDataPush("192.168.8.150", 18888);
+    await robot.WaitForCriData(5.0);
+
+    // 3. IO / IO 操作
     int di0 = await robot.GetDi(0);
     await robot.SetDo(10, di0);
 
-    // 3. Register / 寄存器
+    // 4. Register / 寄存器
     RegisterReadValue reg = await robot.GetRegisterValue(49100);
     int value = reg.GetInt32();
     await robot.SetRegisterValue(49100, value + 1);
 
-    // 4. Motion / 运动
+    // 5. Motion / 运动
     await robot.MovJ(JointPoint.Degrees(new[] { 0, 0, 90, 0, 90, 0 }), speed: 40, acc: 100);
 
-    // 5. Blocking motion / 阻塞运动
+    // 6. Blocking motion / 阻塞运动
     robot.MovLSync(
         CartesianPoint.MmDegWithRef(new[] { 400, 0, 300, 180, 0, 0 }, robot.CriData.JointPosition),
         speed: 150, acc: 500);
