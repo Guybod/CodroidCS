@@ -1,5 +1,13 @@
 # Codroid C# SDK 版本说明
 
+## v2.1.6（2026-05-30）
+
+### 改进
+
+- **`Disconnect` 自动停止 CRI 数据推送**：之前需要手动调用 `StopCriDataPush` 再断开，否则控制器会残留脏状态。现在 `Disconnect` 会自动尝试停止 CRI 推送（失败不阻塞断开）
+
+---
+
 ## v2.1.5（2026-05-30）
 
 ### Bug Fixes

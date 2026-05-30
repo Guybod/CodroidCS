@@ -1994,6 +1994,15 @@ namespace Codroid
         /// </remarks>
         public void Disconnect()
         {
+            try
+            {
+                StopCriDataPush().ConfigureAwait(false).GetAwaiter().GetResult();
+            }
+            catch
+            {
+                // 忽略：多客户端或已断开时不阻塞 Disconnect
+            }
+
             StopCriUdpListener();
             _TcpClient.Disconnect();
         }
