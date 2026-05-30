@@ -1,5 +1,27 @@
 # Codroid C# SDK 版本说明
 
+## v2.1.4（2026-05-30）
+
+### Breaking Change
+
+- **`blend` 参数类型变更**：`double` → `double?`，默认值从 `25` 改为 `null`
+  - 之前不传 `blend` 会自动应用 25mm 平滑过渡，现在不传表示**无过渡**
+  - 如需保持旧行为，请显式传入 `blend: 25`
+- **`blend` 与 `relativeBlend` 互斥**：同时传入时 `relativeBlend` 无效
+- **`coor` / `tool` 语义明确**：`null` 表示指令中不包含该字段（非"使用默认坐标系"）
+
+### 涉及方法
+
+- `MoveInstruction` 工厂方法：`MovJ`、`MovL`、`MovC`、`MovCircle`
+- `CodroidClient`：`MovJ`、`MovL`、`MovC`、`MovCircle` 及其 `*Sync` 变体（共 12 个方法）
+
+### 文档
+
+- 所有 API 文档参数表同步更新，补充 `blend`/`relativeBlend` 互斥说明和 `coor`/`tool` 的 null 语义
+- SDK 手册版本号升级至 v2.1.4
+
+---
+
 ## v2.1.3（2026-05-29）
 
 ### 修复
