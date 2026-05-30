@@ -7,6 +7,9 @@
 - **`blend` 参数类型变更**：`double` → `double?`，默认值从 `25` 改为 `null`
   - 之前不传 `blend` 会自动应用 25mm 平滑过渡，现在不传表示**无过渡**
   - 如需保持旧行为，请显式传入 `blend: 25`
+- **`relativeBlend` 参数类型变更**：`double?`（默认 `null`）
+  - 之前不传会使用默认值，现在不传表示**不使用相对平滑**
+  - 如需保持旧行为，请显式传入 `relativeBlend: 0`
 - **`blend` 与 `relativeBlend` 互斥**：同时传入时 `relativeBlend` 无效
 - **`coor` / `tool` 语义明确**：`null` 表示指令中不包含该字段（非"使用默认坐标系"）
 
