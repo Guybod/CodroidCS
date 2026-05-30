@@ -1879,7 +1879,8 @@ namespace Codroid
             double max = 0;
             for (int i = 3; i < 6; i++)
             {
-                double d = Math.Abs(actualPose[i] - targetPose[i]);
+                double d = (actualPose[i] - targetPose[i]) % 360;
+                d = Math.Min(Math.Abs(d), 360 - Math.Abs(d));
                 if (d > max)
                 {
                     max = d;
