@@ -449,6 +449,10 @@ Establishes TCP connection to the controller.
 await robot.Connect();
 ```
 
+**Returns:** `Task` — no return value
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
+
 ---
 
 ### ConnectRemoteAndSwitchOn
@@ -462,6 +466,10 @@ Connects TCP, enters remote mode via auto, then powers on. This is the recommend
 ```csharp
 await robot.ConnectRemoteAndSwitchOn();
 ```
+
+**Returns:** `Task` — no return value
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
 
 ---
 
@@ -485,6 +493,10 @@ finally
 }
 ```
 
+**Returns:** void
+
+**Throws:** none
+
 ---
 
 ## 2. Mode Switching
@@ -498,16 +510,15 @@ public async Task<CommonResponse> SwitchOff()
 
 Power on / power off the robot.
 
-| Method | Protocol |
-|--------|----------|
-| `SwitchOn()` | `Robot/switchOn` |
-| `SwitchOff()` | `Robot/switchOff` |
-
 ```csharp
 await robot.SwitchOn();
 // ... operations ...
 await robot.SwitchOff();
 ```
+
+**Returns:** `Task<CommonResponse>` — controller response
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
 
 ---
 
@@ -521,11 +532,9 @@ public Task<CommonResponse> ToRemote()
 
 Switch to manual / auto / remote mode. Requires firmware 2.3.2.6+.
 
-| Method | Protocol |
-|--------|----------|
-| `ToManual()` | `Robot/toManual` |
-| `ToAuto()` | `Robot/toAuto` |
-| `ToRemote()` | `Robot/toRemote` |
+**Returns:** `Task<CommonResponse>` — controller response
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
 
 ---
 
@@ -542,6 +551,10 @@ Switches to auto first, then to manual / remote. Satisfies the controller's "mus
 await robot.EnterRemoteModeViaAuto();
 ```
 
+**Returns:** `Task<CommonResponse>` — controller response
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
+
 ---
 
 ### ToSimulation / ToActual
@@ -552,6 +565,10 @@ public Task<CommonResponse> ToActual()
 ```
 
 Switch to simulation / real-machine mode.
+
+**Returns:** `Task<CommonResponse>` — controller response
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
 
 ---
 
@@ -564,6 +581,10 @@ public Task<CommonResponse> StopDrag()
 
 Enter / exit drag mode. Requires firmware 2.3.2.6+.
 
+**Returns:** `Task<CommonResponse>` — controller response
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
+
 ---
 
 ### ClearSystemError
@@ -574,9 +595,9 @@ public Task<CommonResponse> ClearSystemError()
 
 Clears the system error state.
 
-| Method | Protocol |
-|--------|----------|
-| `ClearSystemError()` | `System/clearError` |
+**Returns:** `Task<CommonResponse>` — controller response
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
 
 ---
 
@@ -604,6 +625,10 @@ public Task<CommonResponse> MovJ(CartesianPoint target, double speed, double acc
 | `tool` | `double[]?` | null | Tool coordinate frame. `null` = omitted from command |
 | `relativeBlend` | `double?` | null | Relative blend ratio (0–1). Mutually exclusive with `blend` — if both set, this is ignored |
 
+**Returns:** `Task<CommonResponse>` — controller response
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
+
 ```csharp
 // Joint target
 await robot.MovJ(JointPoint.Degrees(new[] { 0, 0, 90, 0, 90, 0 }), speed: 40, acc: 100);
@@ -624,6 +649,20 @@ public Task<CommonResponse> MovL(JointPoint target, double speed, double acc,
     double? blend = null, double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 ```
 
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `target` | `CartesianPoint` / `JointPoint` | — | Target position |
+| `speed` | `double` | — | Speed (mm/s) |
+| `acc` | `double` | — | Acceleration |
+| `blend` | `double?` | null | Blend radius. Mutually exclusive with `relativeBlend` — if both set, `relativeBlend` is ignored. Omit for no transition |
+| `coor` | `double[]?` | null | User coordinate frame. `null` = omitted from command |
+| `tool` | `double[]?` | null | Tool coordinate frame. `null` = omitted from command |
+| `relativeBlend` | `double?` | null | Relative blend ratio (0–1). Mutually exclusive with `blend` — if both set, this is ignored |
+
+**Returns:** `Task<CommonResponse>` — controller response
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
+
 ```csharp
 // Cartesian linear move
 await robot.MovL(CartesianPoint.MmDegWithRef(pose, robot.CriData.JointPosition),
@@ -643,10 +682,20 @@ public Task<CommonResponse> MovC(CartesianPoint middle, CartesianPoint target,
     double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 ```
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `middle` | `CartesianPoint` | Intermediate point (on arc) |
-| `target` | `CartesianPoint` | End point |
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `middle` | `CartesianPoint` | — | Intermediate point (on arc) |
+| `target` | `CartesianPoint` | — | End point |
+| `speed` | `double` | — | Speed (mm/s) |
+| `acc` | `double` | — | Acceleration |
+| `blend` | `double?` | null | Blend radius. Mutually exclusive with `relativeBlend` — if both set, `relativeBlend` is ignored. Omit for no transition |
+| `coor` | `double[]?` | null | User coordinate frame. `null` = omitted from command |
+| `tool` | `double[]?` | null | Tool coordinate frame. `null` = omitted from command |
+| `relativeBlend` | `double?` | null | Relative blend ratio (0–1). Mutually exclusive with `blend` — if both set, this is ignored |
+
+**Returns:** `Task<CommonResponse>` — controller response
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
 
 ```csharp
 await robot.MovC(
@@ -665,11 +714,21 @@ public Task<CommonResponse> MovCircle(CartesianPoint middle, CartesianPoint targ
     double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 ```
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `middle` | `CartesianPoint` | Intermediate point |
-| `target` | `CartesianPoint` | End point |
-| `circleNum` | `int` | Number of full circles |
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `middle` | `CartesianPoint` | — | Intermediate point |
+| `target` | `CartesianPoint` | — | End point |
+| `circleNum` | `int` | — | Number of full circles |
+| `speed` | `double` | — | Speed (mm/s) |
+| `acc` | `double` | — | Acceleration |
+| `blend` | `double?` | null | Blend radius. Mutually exclusive with `relativeBlend` — if both set, `relativeBlend` is ignored. Omit for no transition |
+| `coor` | `double[]?` | null | User coordinate frame. `null` = omitted from command |
+| `tool` | `double[]?` | null | Tool coordinate frame. `null` = omitted from command |
+| `relativeBlend` | `double?` | null | Relative blend ratio (0–1). Mutually exclusive with `blend` — if both set, this is ignored |
+
+**Returns:** `Task<CommonResponse>` — controller response
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
 
 ```csharp
 await robot.MovCircle(
@@ -687,6 +746,14 @@ public async Task<CommonResponse> Move(IReadOnlyList<MoveInstruction> instructio
 ```
 
 Sends a list of motion instructions as a single path command.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `instructions` | `IReadOnlyList<MoveInstruction>` | — | List of move instructions |
+
+**Returns:** `Task<CommonResponse>` — controller response
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
 
 ```csharp
 await robot.Move(new[]
@@ -717,6 +784,23 @@ public bool MovJSync(CartesianPoint target, double speed, double acc,
     double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 ```
 
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `target` | `JointPoint` / `CartesianPoint` | — | Target position |
+| `speed` | `double` | — | Speed (deg/s) |
+| `acc` | `double` | — | Acceleration |
+| `wait` | `MotionWaitOptions?` | null | Wait options (timeout, tolerance, etc.) |
+| `blend` | `double?` | null | Blend radius. Mutually exclusive with `relativeBlend` — if both set, `relativeBlend` is ignored. Omit for no transition |
+| `coor` | `double[]?` | null | User coordinate frame. `null` = omitted from command |
+| `tool` | `double[]?` | null | Tool coordinate frame. `null` = omitted from command |
+| `relativeBlend` | `double?` | null | Relative blend ratio (0–1). Mutually exclusive with `blend` — if both set, this is ignored |
+
+**Returns:** `bool` — `true` when target is reached
+
+**Throws:**
+- `TimeoutException` — motion timed out (controlled by `MotionWaitOptions.Timeout`)
+- `InvalidOperationException` — robot in abnormal state (collision, E-stop, alarm) or stopped without reaching target
+
 ```csharp
 var wait = new MotionWaitOptions
 {
@@ -741,6 +825,21 @@ public bool MovLSync(JointPoint target, double speed, double acc,
     double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 ```
 
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `target` | `CartesianPoint` / `JointPoint` | — | Target position |
+| `speed` | `double` | — | Speed (mm/s) |
+| `acc` | `double` | — | Acceleration |
+| `wait` | `MotionWaitOptions?` | null | Wait options |
+| `blend` | `double?` | null | Blend radius. Mutually exclusive with `relativeBlend` — if both set, `relativeBlend` is ignored. Omit for no transition |
+| `coor` | `double[]?` | null | User coordinate frame. `null` = omitted from command |
+| `tool` | `double[]?` | null | Tool coordinate frame. `null` = omitted from command |
+| `relativeBlend` | `double?` | null | Relative blend ratio (0–1). Mutually exclusive with `blend` — if both set, this is ignored |
+
+**Returns:** `bool` — `true` when target is reached
+
+**Throws:** `TimeoutException` (motion timeout), `InvalidOperationException` (abnormal state or target not reached)
+
 ```csharp
 robot.MovLSync(
     CartesianPoint.MmDegWithRef(pose, robot.CriData.JointPosition),
@@ -763,6 +862,22 @@ public bool MovCSync(CartesianPoint middle, CartesianPoint target,
     double? blend = null, double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 ```
 
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `middle` | `CartesianPoint` | — | Intermediate point (on arc) |
+| `target` | `CartesianPoint` | — | End point |
+| `speed` | `double` | — | Speed (mm/s) |
+| `acc` | `double` | — | Acceleration |
+| `wait` | `MotionWaitOptions?` | null | Wait options |
+| `blend` | `double?` | null | Blend radius. Mutually exclusive with `relativeBlend` — if both set, `relativeBlend` is ignored. Omit for no transition |
+| `coor` | `double[]?` | null | User coordinate frame. `null` = omitted from command |
+| `tool` | `double[]?` | null | Tool coordinate frame. `null` = omitted from command |
+| `relativeBlend` | `double?` | null | Relative blend ratio (0–1). Mutually exclusive with `blend` — if both set, this is ignored |
+
+**Returns:** `bool` — `true` when target is reached
+
+**Throws:** `TimeoutException` (motion timeout), `InvalidOperationException` (abnormal state or target not reached)
+
 ```csharp
 robot.MovCSync(
     CartesianPoint.MmDeg(mid), CartesianPoint.MmDeg(end),
@@ -779,6 +894,23 @@ public bool MovCircleSync(CartesianPoint middle, CartesianPoint target,
     double? blend = null, double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 ```
 
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `middle` | `CartesianPoint` | — | Intermediate point |
+| `target` | `CartesianPoint` | — | End point |
+| `circleNum` | `int` | — | Number of full circles |
+| `speed` | `double` | — | Speed (mm/s) |
+| `acc` | `double` | — | Acceleration |
+| `wait` | `MotionWaitOptions?` | null | Wait options |
+| `blend` | `double?` | null | Blend radius. Mutually exclusive with `relativeBlend` — if both set, `relativeBlend` is ignored. Omit for no transition |
+| `coor` | `double[]?` | null | User coordinate frame. `null` = omitted from command |
+| `tool` | `double[]?` | null | Tool coordinate frame. `null` = omitted from command |
+| `relativeBlend` | `double?` | null | Relative blend ratio (0–1). Mutually exclusive with `blend` — if both set, this is ignored |
+
+**Returns:** `bool` — `true` when target is reached
+
+**Throws:** `TimeoutException` (motion timeout), `InvalidOperationException` (abnormal state or target not reached)
+
 ---
 
 ### MoveSync
@@ -788,6 +920,15 @@ public bool MoveSync(IReadOnlyList<MoveInstruction> instructions, MotionWaitOpti
 ```
 
 Sends multi-segment path and blocks until the last segment target is reached.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `instructions` | `IReadOnlyList<MoveInstruction>` | — | List of move instructions |
+| `wait` | `MotionWaitOptions?` | null | Wait options |
+
+**Returns:** `bool` — `true` when target is reached
+
+**Throws:** `TimeoutException` (motion timeout), `InvalidOperationException` (abnormal state or target not reached)
 
 ```csharp
 robot.MoveSync(new[]
@@ -809,9 +950,9 @@ public async Task<CommonResponse> PauseRobotMotion()
 
 Pauses the current motion.
 
-| Method | Protocol |
-|--------|----------|
-| `PauseRobotMotion()` | `Robot/pause` |
+**Returns:** `Task<CommonResponse>` — controller response
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
 
 ---
 
@@ -823,9 +964,9 @@ public async Task<CommonResponse> ResumeRobotMotion()
 
 Resumes paused motion.
 
-| Method | Protocol |
-|--------|----------|
-| `ResumeRobotMotion()` | `Robot/resume` |
+**Returns:** `Task<CommonResponse>` — controller response
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
 
 ---
 
@@ -837,9 +978,9 @@ public async Task<CommonResponse> StopRobotMove()
 
 Stops the current motion immediately.
 
-| Method | Protocol |
-|--------|----------|
-| `StopRobotMove()` | `Robot/stopMove` |
+**Returns:** `Task<CommonResponse>` — controller response
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
 
 ---
 
@@ -853,9 +994,14 @@ public async Task<CommonResponse> MoveTo(MoveToKind kind, MoveToTarget? target =
 
 Moves to a preset or planned position. Requires heartbeat while running.
 
-| Method | Protocol |
-|--------|----------|
-| `MoveTo(kind, target)` | `Robot/moveTo` |
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `kind` | `MoveToKind` | — | Target type (Home, Safe, JointPlanned, etc.) |
+| `target` | `MoveToTarget?` | null | Planned target (only for JointPlanned/LinePlanned) |
+
+**Returns:** `Task<CommonResponse>` — controller response
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
 
 ```csharp
 // Move to home position
@@ -878,9 +1024,9 @@ public async Task<CommonResponse> MoveToHeartbeat()
 
 Sends heartbeat to maintain MoveTo motion. Call at ~500ms intervals.
 
-| Method | Protocol |
-|--------|----------|
-| `MoveToHeartbeat()` | `Robot/moveToHeartbeat` |
+**Returns:** `Task<CommonResponse>` — controller response
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
 
 ---
 
@@ -892,9 +1038,9 @@ public async Task<CommonResponse> StopMoveTo()
 
 Stops the current MoveTo / RunTo motion.
 
-| Method | Protocol |
-|--------|----------|
-| `StopMoveTo()` | `Robot/moveTo` (type=-1) |
+**Returns:** `Task<CommonResponse>` — controller response
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
 
 ---
 
@@ -908,9 +1054,13 @@ public async Task<CommonResponse> StartJog(RobotJogParameters parameters)
 
 Starts jogging. Requires heartbeat at ~500ms intervals.
 
-| Method | Protocol |
-|--------|----------|
-| `StartJog(parameters)` | `Robot/jog` |
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `parameters` | `RobotJogParameters` | — | Jog parameters (mode, speed, axis index, coordinate frame) |
+
+**Returns:** `Task<CommonResponse>` — controller response
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
 
 ```csharp
 var jogParams = RobotJogParameters.Create(
@@ -943,9 +1093,9 @@ public async Task<CommonResponse> StopJog()
 
 Stops jogging.
 
-| Method | Protocol |
-|--------|----------|
-| `StopJog()` | `Robot/stopJog` |
+**Returns:** `Task<CommonResponse>` — controller response
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
 
 ---
 
@@ -957,9 +1107,9 @@ public async Task<CommonResponse> JogHeartbeat()
 
 Sends heartbeat to maintain jog state. Call at ~500ms intervals.
 
-| Method | Protocol |
-|--------|----------|
-| `JogHeartbeat()` | `Robot/jogHeartbeat` |
+**Returns:** `Task<CommonResponse>` — controller response
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
 
 ---
 
@@ -974,12 +1124,13 @@ public async Task<double> GetAi(int port)   // Read AI
 public async Task<double> GetAo(int port)   // Read AO
 ```
 
-| Method | Returns | Protocol |
-|--------|---------|----------|
-| `GetDi(port)` | `int` (0 or 1) | `IOManager/GetIOValue` |
-| `GetDo(port)` | `int` (0 or 1) | `IOManager/GetIOValue` |
-| `GetAi(port)` | `double` | `IOManager/GetIOValue` |
-| `GetAo(port)` | `double` | `IOManager/GetIOValue` |
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `port` | `int` | — | IO port number |
+
+**Returns:** `GetDi`/`GetDo` → `Task<int>` (0 or 1); `GetAi`/`GetAo` → `Task<double>`
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
 
 ```csharp
 int di0 = await robot.GetDi(0);
@@ -998,10 +1149,14 @@ public async Task<CommonResponse> SetDo(int port, int value)     // Write DO (0 
 public async Task<CommonResponse> SetAo(int port, double value)  // Write AO
 ```
 
-| Method | Protocol |
-|--------|----------|
-| `SetDo(port, value)` | `IOManager/SetIOValue` |
-| `SetAo(port, value)` | `IOManager/SetIOValue` |
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `port` | `int` | — | IO port number |
+| `value` | `int` / `double` | — | Value to write (`SetDo`: 0 or 1; `SetAo`: floating-point) |
+
+**Returns:** `Task<CommonResponse>` — controller response
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s), `ArgumentOutOfRangeException` (`SetDo` value not 0 or 1)
 
 ```csharp
 await robot.SetDo(10, 1);   // Set DO 10 high
@@ -1016,6 +1171,14 @@ await robot.SetAo(0, 3.14); // Set AO 0 to 3.14
 ```csharp
 public async Task<CommonResponse> GetIoValues(IReadOnlyList<(string Type, int Port)> pins)
 ```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `pins` | `IReadOnlyList<(string Type, int Port)>` | — | IO pin list, Type: `"DI"`/`"DO"`/`"AI"`/`"AO"` |
+
+**Returns:** `Task<CommonResponse>` — results in `resp.db`
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
 
 ```csharp
 var pins = new (string Type, int Port)[]
@@ -1037,6 +1200,14 @@ CommonResponse resp = await robot.GetIoValues(pins);
 public async Task<RegisterReadValue> GetRegisterValue(int address)
 ```
 
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `address` | `int` | — | Register address |
+
+**Returns:** `Task<RegisterReadValue>` — contains address and raw JSON value, use `GetInt32()`/`GetDouble()` to convert
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
+
 ```csharp
 RegisterReadValue reg = await robot.GetRegisterValue(49100);
 int intVal = reg.GetInt32();
@@ -1050,6 +1221,14 @@ double dblVal = reg.GetDouble();
 ```csharp
 public async Task<IReadOnlyList<RegisterReadValue>> GetRegisterValues(IReadOnlyList<int> addresses)
 ```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `addresses` | `IReadOnlyList<int>` | — | List of register addresses |
+
+**Returns:** `Task<IReadOnlyList<RegisterReadValue>>` — register values in same order as input addresses
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
 
 ```csharp
 var addresses = new[] { 49100, 49101, 49102 };
@@ -1102,6 +1281,14 @@ public async Task<CommonResponse> SetAutoMoveRate(int percent)
 
 Set manual / auto motion rate (1~100%).
 
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `percent` | `int` | -- | Motion rate percentage (1~100) |
+
+**Returns:** `Task<CommonResponse>` — controller response
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s), `ArgumentOutOfRangeException` (percent out of range)
+
 ```csharp
 await robot.SetManualMoveRate(50);  // 50% speed
 await robot.SetAutoMoveRate(100);   // Full speed
@@ -1117,6 +1304,14 @@ public async Task<CommonResponse> SetCollisionSensitivity(int sensitivity)
 
 Set collision detection sensitivity (0~100). Firmware 2.3.2.10+.
 
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `sensitivity` | `int` | -- | Collision detection sensitivity (0~100) |
+
+**Returns:** `Task<CommonResponse>` — controller response
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s), `ArgumentOutOfRangeException` (sensitivity out of range)
+
 ```csharp
 await robot.SetCollisionSensitivity(50);
 ```
@@ -1131,6 +1326,14 @@ public async Task<CommonResponse> SetPayload(int payloadId)
 
 Set active payload slot (0~15). Firmware 2.3.2.10+.
 
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `payloadId` | `int` | -- | Active payload slot ID (0~15) |
+
+**Returns:** `Task<CommonResponse>` — controller response
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s), `ArgumentOutOfRangeException` (payloadId out of range)
+
 ```csharp
 await robot.SetPayload(1); // Use payload slot 1
 ```
@@ -1144,6 +1347,10 @@ public async Task<RobotParameters> GetRobotParameters()
 ```
 
 Gets all setting-interface parameters (protocol 19.7). Returns tool frames, payload frames, coordinate frames, and default IDs.
+
+**Returns:** `Task<RobotParameters>` — robot parameters including tool frames, payload frames, coordinate frames, and default IDs
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
 
 ```csharp
 RobotParameters param = await robot.GetRobotParameters();
@@ -1164,6 +1371,14 @@ public Task<CommonResponse> SetDefaultUserCoordinateId(int coordinateId) // 0~15
 
 Set default payload / tool / user coordinate frame slot.
 
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `payloadId` / `toolId` / `coordinateId` | `int` | -- | Frame slot ID (0~15) |
+
+**Returns:** `Task<CommonResponse>` — controller response
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s), `ArgumentOutOfRangeException` (id out of range)
+
 ```csharp
 await robot.SetDefaultToolId(2);
 await robot.SetDefaultPayloadId(1);
@@ -1180,6 +1395,16 @@ public async Task<CommonResponse> SetToolFrame(int frameId, RobotFrame frame)
 ```
 
 Save the full tool frame table (must include id 0~15, id=0 must be all zeros) / Modify a single tool frame (read-then-write, id 1~15 only).
+
+| Method | Parameter | Type | Default | Description |
+|--------|-----------|------|---------|-------------|
+| `SaveToolFrames` | `frames` | `IReadOnlyList<RobotFrame>` | -- | Complete tool frame table (id 0~15, id=0 must be all zeros) |
+| `SetToolFrame` | `frameId` | `int` | -- | Tool frame ID (1~15) |
+| | `frame` | `RobotFrame` | -- | Tool frame data |
+
+**Returns:** `Task<CommonResponse>` — controller response
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
 
 ```csharp
 // Set single tool frame
@@ -1200,6 +1425,16 @@ public async Task<CommonResponse> SetPayloadFrame(int frameId, RobotPayloadFrame
 
 Save full payload frame table / Modify single payload frame (id 1~15).
 
+| Method | Parameter | Type | Default | Description |
+|--------|-----------|------|---------|-------------|
+| `SavePayloadFrames` | `frames` | `IReadOnlyList<RobotPayloadFrame>` | -- | Complete payload frame table (id 0~15) |
+| `SetPayloadFrame` | `frameId` | `int` | -- | Payload frame ID (1~15) |
+| | `frame` | `RobotPayloadFrame` | -- | Payload frame data |
+
+**Returns:** `Task<CommonResponse>` — controller response
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
+
 ```csharp
 await robot.SetPayloadFrame(1, new RobotPayloadFrame
 {
@@ -1217,6 +1452,16 @@ public async Task<CommonResponse> SetUserCoordinateFrame(int frameId, RobotFrame
 ```
 
 Save full user coordinate frame table / Modify single user coordinate frame (id 1~15).
+
+| Method | Parameter | Type | Default | Description |
+|--------|-----------|------|---------|-------------|
+| `SaveUserCoordinateFrames` | `frames` | `IReadOnlyList<RobotFrame>` | -- | Complete user coordinate frame table (id 0~15) |
+| `SetUserCoordinateFrame` | `frameId` | `int` | -- | User coordinate frame ID (1~15) |
+| | `frame` | `RobotFrame` | -- | User coordinate frame data |
+
+**Returns:** `Task<CommonResponse>` — controller response
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
 
 ```csharp
 await robot.SetUserCoordinateFrame(1, new RobotFrame
@@ -1236,6 +1481,15 @@ public async Task<CommonResponse> StartCriDataPush(string udpIp, int udpPort)
 ```
 
 Starts local UDP listener and requests controller to push CRI real-time data. Fixed params: 100ms period, high-precision, mask 0xFFFF, 308-byte UDP packet.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `udpIp` | `string` | -- | Local IP address to receive CRI UDP data |
+| `udpPort` | `int` | -- | Local UDP port number |
+
+**Returns:** `Task<CommonResponse>` — controller response
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
 
 | Method | Protocol |
 |--------|----------|
@@ -1259,6 +1513,15 @@ public async Task<CommonResponse> StopCriDataPush(string? udpIp = null, int? udp
 ```
 
 Requests controller to stop CRI data push and closes local UDP listener.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `udpIp` | `string?` | null | Local IP address (optional) |
+| `udpPort` | `int?` | null | Local UDP port (optional) |
+
+**Returns:** `Task<CommonResponse>` — controller response
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
 
 | Method | Protocol |
 |--------|----------|
@@ -1286,6 +1549,10 @@ Enables CRI real-time control mode.
 | `durationMs` | `int` | 4 | Control period (1~16ms, must divide 1000) |
 | `startBuffer` | `int` | 5 | Start buffer frames (1~100) |
 
+**Returns:** `Task<CommonResponse>` — controller response
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
+
 | Method | Protocol |
 |--------|----------|
 | `StartCriControl(...)` | `CRI/StartControl` |
@@ -1303,6 +1570,10 @@ public async Task<CommonResponse> StopCriControl()
 ```
 
 Disables CRI real-time control mode.
+
+**Returns:** `Task<CommonResponse>` — controller response
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
 
 | Method | Protocol |
 |--------|----------|
@@ -1324,6 +1595,10 @@ Requests entering remote script mode.
 |--------|----------|
 | `EnterRemoteScriptMode()` | `project/enterRemoteScriptMode` |
 
+**Returns:** `Task<CommonResponse>` — controller response
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
+
 ---
 
 ### RunScript
@@ -1338,6 +1613,18 @@ public async Task<CommonResponse> RunScript(
 ```
 
 Sends a script for immediate execution.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `mainScript` | `string` | -- | Main script content to execute |
+| `subThreads` | `IReadOnlyDictionary<string, string>?` | null | Sub-thread scripts keyed by name |
+| `subPrograms` | `IReadOnlyDictionary<string, string>?` | null | Sub-program scripts keyed by name |
+| `interrupts` | `IReadOnlyDictionary<string, string>?` | null | Interrupt handler scripts keyed by name |
+| `vars` | `IReadOnlyDictionary<string, object>?` | null | Initial variable values keyed by name |
+
+**Returns:** `Task<CommonResponse>` — controller response
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
 
 ```csharp
 await robot.RunScript(mainScript: "movej(j1, v50) sub1() end");
@@ -1354,6 +1641,28 @@ public async Task<CommonResponse> RunStep(string projectID)
 ```
 
 Start a project by ID / index / single-step.
+
+**`Run(string projectID)`**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `projectID` | `string` | -- | Project identifier to run |
+
+**`RunByIndex(int index)`**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `index` | `int` | -- | Project index to run |
+
+**`RunStep(string projectID)`**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `projectID` | `string` | -- | Project identifier to run in single-step mode |
+
+**Returns:** `Task<CommonResponse>` — controller response
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
 
 ```csharp
 await robot.Run("project_001");
@@ -1377,6 +1686,10 @@ public async Task<CommonResponse> StopProject()
 | `ResumeProject()` | `project/resume` |
 | `StopProject()` | `project/stop` |
 
+**Returns:** `Task<CommonResponse>` — controller response
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
+
 ---
 
 ## 14. Publish/Subscribe
@@ -1389,6 +1702,16 @@ public async Task<PublishTopicSubscription> SubscribePublishTopic(
 ```
 
 Subscribes to a TCP topic push. Returns a disposable subscription handle.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `topicTy` | `string` | -- | Topic name, e.g. `PublishTopics.RobotStatus` |
+| `handler` | `Action<PublishNotification>` | -- | Callback to process notifications; should not block for long |
+| `tcMilliseconds` | `int` | 100 | Protocol `tc` field in milliseconds |
+
+**Returns:** `Task<PublishTopicSubscription>` — disposable subscription handle
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
 
 ```csharp
 using var sub = await robot.SubscribePublishTopic(
@@ -1415,6 +1738,18 @@ public async Task<CommonResponse> GetGlobalVars()
 public async Task<IReadOnlyDictionary<string, GlobalVarCatalogEntry>> GetGlobalVarsCatalog()
 ```
 
+**`GetGlobalVars()`** — no parameters.
+
+**Returns:** `Task<CommonResponse>` — controller response with all global variables in `db`
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
+
+**`GetGlobalVarsCatalog()`** — no parameters.
+
+**Returns:** `Task<IReadOnlyDictionary<string, GlobalVarCatalogEntry>>` — dictionary keyed by variable name
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
+
 ```csharp
 var catalog = await robot.GetGlobalVarsCatalog();
 foreach (var (name, entry) in catalog)
@@ -1431,6 +1766,24 @@ foreach (var (name, entry) in catalog)
 public Task<CommonResponse> SaveGlobalVar(string name, object value, string? remark = null)
 public async Task<CommonResponse> SaveGlobalVars(IReadOnlyCollection<GlobalVarSaveItem> items)
 ```
+
+**`SaveGlobalVar(string name, object value, string? remark = null)`**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | `string` | -- | Variable name (validated by `GlobalVarNaming.Validate()`) |
+| `value` | `object` | -- | Any JSON-serializable object, or `GlobalVarRawJson` |
+| `remark` | `string?` | null | Optional remark or description |
+
+**`SaveGlobalVars(IReadOnlyCollection<GlobalVarSaveItem> items)`**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `items` | `IReadOnlyCollection<GlobalVarSaveItem>` | -- | Collection of variables to save |
+
+**Returns:** `Task<CommonResponse>` — controller response
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s), `ArgumentException` (invalid variable name)
 
 ```csharp
 // Single
@@ -1454,6 +1807,14 @@ public async Task<CommonResponse> RemoveGlobalVars(IEnumerable<string> names)
 
 Deletes specified global variables. Deleting nonexistent variables is not an error.
 
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `names` | `IEnumerable<string>` | -- | Variable names to delete |
+
+**Returns:** `Task<CommonResponse>` — controller response
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
+
 ```csharp
 await robot.RemoveGlobalVars(new[] { "counter", "x", "y" });
 ```
@@ -1470,6 +1831,19 @@ public async Task<double[]> AposToCposPose(double[] jointDegrees, double[] userF
 ```
 
 Forward kinematics: joint space to Cartesian space. `AposToCposPose` returns [x,y,z,rx,ry,rz] in mm+deg.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `jointDegrees` | `double[]` | -- | 6 joint angles in degrees |
+| `userFrame` | `double[]` | -- | User coordinate frame [x,y,z,rx,ry,rz] (mm + deg) |
+| `toolFrame` | `double[]` | -- | Tool coordinate frame [x,y,z,rx,ry,rz] (mm + deg) |
+| `externalAxisPositions` | `double[]?` | null | External axis positions |
+
+**`AposToCpos` Returns:** `Task<CommonResponse>` — controller response
+
+**`AposToCposPose` Returns:** `Task<double[]>` — [x,y,z,rx,ry,rz] in mm + deg
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
 
 ```csharp
 double[] joints = { 0, 0, 90, 0, 90, 0 };
@@ -1491,6 +1865,18 @@ public async Task<double[]> CposToAposJoints(double[] cartesianMmDeg, double[] r
 ```
 
 Inverse kinematics: Cartesian to joint space. `CposToAposJoints` returns 6 joint angles in degrees.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `cartesianMmDeg` | `double[]` | -- | Cartesian pose [x,y,z,rx,ry,rz] in mm + deg |
+| `referenceJointDegrees` | `double[]` | -- | Reference joint angles (starting guess for IK solver) |
+| `externalAxisPositions` | `double[]?` | null | External axis positions |
+
+**`CposToApos` Returns:** `Task<CommonResponse>` — controller response
+
+**`CposToAposJoints` Returns:** `Task<double[]>` — 6 joint angles in degrees
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s), `InvalidOperationException` (no IK solution found)
 
 ```csharp
 double[] pose = { 400, 0, 300, 180, 0, 0 };
@@ -1518,6 +1904,12 @@ Calculates a relative pose / offset in user or tool coordinate frame.
 | `coorType` | `RelativePoseCoorType` | User or Tool |
 | `tcpPoseInPosCoorFrame` | `double[]?` | TCP pose in position coordinate frame |
 | `userCoorFrame` | `double[]?` | User coordinate frame definition |
+
+**`CalculateRelativePose` Returns:** `Task<CommonResponse>` — controller response
+
+**`CalculateRelativePoseResult` Returns:** `Task<double[]>` — [x,y,z,rx,ry,rz] relative pose in mm + deg
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
 
 ```csharp
 double[] currentPose = { 400, 0, 300, 180, 0, 0 };
@@ -3084,6 +3476,14 @@ Console.WriteLine($"DI 0 = {di0}"); // 0 or 1
 Task<int> GetDi(int port)
 ```
 
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `port` | `int` | -- | Port number |
+
+**Returns:** `Task<int>` -- `0` or `1`
+
+**Throws:** `CodroidCommandException`, `TimeoutException`
+
 ---
 
 ### GetDo -- Read Digital Output
@@ -3101,6 +3501,14 @@ Console.WriteLine($"DO 10 = {do10}");
 ```csharp
 Task<int> GetDo(int port)
 ```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `port` | `int` | -- | Port number |
+
+**Returns:** `Task<int>` -- `0` or `1`
+
+**Throws:** `CodroidCommandException`, `TimeoutException`
 
 ---
 
@@ -3120,6 +3528,14 @@ Console.WriteLine($"AI 1 = {ai1:F3}");
 Task<double> GetAi(int port)
 ```
 
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `port` | `int` | -- | Port number |
+
+**Returns:** `Task<double>`
+
+**Throws:** `CodroidCommandException`, `TimeoutException`
+
 ---
 
 ### GetAo -- Read Analog Output
@@ -3137,6 +3553,14 @@ Console.WriteLine($"AO 2 = {ao2:F3}");
 ```csharp
 Task<double> GetAo(int port)
 ```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `port` | `int` | -- | Port number |
+
+**Returns:** `Task<double>`
+
+**Throws:** `CodroidCommandException`, `TimeoutException`
 
 ---
 
@@ -3160,6 +3584,15 @@ Task<CommonResponse> SetDo(int port, int value)
 
 Throws `ArgumentOutOfRangeException` if `value` is not `0` or `1`.
 
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `port` | `int` | -- | Port number |
+| `value` | `int` | -- | Value to write (`0` or `1`) |
+
+**Returns:** `Task<CommonResponse>`
+
+**Throws:** `CodroidCommandException`, `TimeoutException`, `ArgumentOutOfRangeException`
+
 ---
 
 ### SetAo -- Write Analog Output
@@ -3176,6 +3609,15 @@ await robot.SetAo(2, 3.14);
 ```csharp
 Task<CommonResponse> SetAo(int port, double value)
 ```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `port` | `int` | -- | Port number |
+| `value` | `double` | -- | Analog value to write |
+
+**Returns:** `Task<CommonResponse>`
+
+**Throws:** `CodroidCommandException`, `TimeoutException`
 
 ---
 
@@ -3204,6 +3646,14 @@ double ao2 = IoGetResponseParser.ParseAnalog(resp, IoPortKind.Ao, 2);
 ```csharp
 Task<CommonResponse> GetIoValues(IReadOnlyList<(string Type, int Port)> pins)
 ```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `pins` | `IReadOnlyList<(string Type, int Port)>` | -- | List of IO pins to read |
+
+**Returns:** `Task<CommonResponse>`
+
+**Throws:** `CodroidCommandException`, `TimeoutException`
 
 ---
 
@@ -3271,6 +3721,14 @@ else
 Task<RegisterReadValue> GetRegisterValue(int address)
 ```
 
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `address` | `int` | -- | Register address |
+
+**Returns:** `Task<RegisterReadValue>`
+
+**Throws:** `CodroidCommandException`, `TimeoutException`
+
 ---
 
 ### GetRegisterValues -- Batch Read
@@ -3296,6 +3754,14 @@ foreach (var r in regs)
 Task<IReadOnlyList<RegisterReadValue>> GetRegisterValues(IReadOnlyList<int> addresses)
 ```
 
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `addresses` | `IReadOnlyList<int>` | -- | List of register addresses to read |
+
+**Returns:** `Task<IReadOnlyList<RegisterReadValue>>`
+
+**Throws:** `CodroidCommandException`, `TimeoutException`
+
 ---
 
 ### SetRegisterValue (int) -- Write Integer
@@ -3316,6 +3782,15 @@ await robot.SetRegisterValue(49100, 0);
 Task<CommonResponse> SetRegisterValue(int address, int value)
 ```
 
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `address` | `int` | -- | Register address |
+| `value` | `int` | -- | Integer value to write |
+
+**Returns:** `Task<CommonResponse>`
+
+**Throws:** `CodroidCommandException`, `TimeoutException`
+
 ---
 
 ### SetRegisterValue (double) -- Write Float
@@ -3335,6 +3810,15 @@ await robot.SetRegisterValue(49300, 0.0);
 ```csharp
 Task<CommonResponse> SetRegisterValue(int address, double value)
 ```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `address` | `int` | -- | Register address |
+| `value` | `double` | -- | Floating-point value to write |
+
+**Returns:** `Task<CommonResponse>`
+
+**Throws:** `CodroidCommandException`, `TimeoutException`
 
 ---
 
@@ -3359,6 +3843,15 @@ Task<CommonResponse> SetExtendArrayType(int index, string type)
 Throws `ArgumentOutOfRangeException` if `index` is not in 0~999.
 Throws `ArgumentException` if `type` is not a recognized value.
 
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `index` | `int` | -- | Extend-array element index (0~999) |
+| `type` | `string` | -- | Data type (e.g. `RegisterExtendArrayValueType.Int32`) |
+
+**Returns:** `Task<CommonResponse>`
+
+**Throws:** `CodroidCommandException`, `TimeoutException`, `ArgumentOutOfRangeException`, `ArgumentException`
+
 ---
 
 ### RemoveExtendArray -- Delete Extended Array Element
@@ -3375,6 +3868,14 @@ await robot.RemoveExtendArray(0);
 ```csharp
 Task<CommonResponse> RemoveExtendArray(int index)
 ```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `index` | `int` | -- | Extend-array element index (0~999) |
+
+**Returns:** `Task<CommonResponse>`
+
+**Throws:** `CodroidCommandException`, `TimeoutException`, `ArgumentOutOfRangeException`
 
 ---
 
@@ -3503,13 +4004,15 @@ Task<PublishTopicSubscription> SubscribePublishTopic(
 
 Subscribes to a TCP publish topic. The first call on a connection sends a subscription frame (no `id`). Subsequent pushes matching `topicTy` are dispatched to `handler` on the thread pool.
 
-| Parameter | Description |
-|-----------|-------------|
-| `topicTy` | Topic name, e.g. `PublishTopics.RobotStatus` |
-| `handler` | Callback to process notifications; should not block for long |
-| `tcMilliseconds` | Protocol `tc` field in ms; default 100 |
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `topicTy` | `string` | -- | Topic name, e.g. `PublishTopics.RobotStatus` |
+| `handler` | `Action<PublishNotification>` | -- | Callback to process notifications; should not block for long |
+| `tcMilliseconds` | `int` | 100 | Protocol `tc` field in milliseconds |
 
-Returns a `PublishTopicSubscription` (disposable). Call `Dispose()` to unregister the local callback. It does NOT send an "unsubscribe" frame to the controller.
+**Returns:** `Task<PublishTopicSubscription>` — disposable subscription handle. Call `Dispose()` to unregister the local callback. It does NOT send an "unsubscribe" frame to the controller.
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
 
 **Example: Subscribe to RobotStatus**
 
@@ -3603,6 +4106,10 @@ Console.WriteLine(resp.db.GetRawText());
 Task<CommonResponse> GetGlobalVars()
 ```
 
+**Returns:** `Task<CommonResponse>` — controller response with all global variables in `db`
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
+
 ---
 
 ### GetGlobalVarsCatalog -- Read Catalog
@@ -3625,6 +4132,10 @@ foreach (var kv in catalog)
 ```csharp
 Task<IReadOnlyDictionary<string, GlobalVarCatalogEntry>> GetGlobalVarsCatalog()
 ```
+
+**Returns:** `Task<IReadOnlyDictionary<string, GlobalVarCatalogEntry>>` — dictionary keyed by variable name
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
 
 ---
 
@@ -3656,6 +4167,16 @@ await robot.SaveGlobalVar("my_pose",
 Task<CommonResponse> SaveGlobalVar(string name, object value, string? remark = null)
 ```
 
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | `string` | -- | Variable name (validated by `GlobalVarNaming.Validate()`) |
+| `value` | `object` | -- | Any JSON-serializable object, or `GlobalVarRawJson` |
+| `remark` | `string?` | null | Optional remark or description |
+
+**Returns:** `Task<CommonResponse>` — controller response
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s), `ArgumentException` (invalid variable name)
+
 Variable names are validated by `GlobalVarNaming.Validate()`: must start with a letter or underscore, contain only `[A-Za-z0-9_]`, must not start with `__`, and must not collide with reserved Lua/controller identifiers.
 
 ---
@@ -3680,6 +4201,14 @@ await robot.SaveGlobalVars(new[]
 Task<CommonResponse> SaveGlobalVars(IReadOnlyCollection<GlobalVarSaveItem> items)
 ```
 
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `items` | `IReadOnlyCollection<GlobalVarSaveItem>` | -- | Collection of variables to save |
+
+**Returns:** `Task<CommonResponse>` — controller response
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s), `ArgumentException` (invalid variable name)
+
 ---
 
 ### RemoveGlobalVars -- Delete
@@ -3695,6 +4224,14 @@ await robot.RemoveGlobalVars(new[] { "sdk_test_int", "sdk_test_float" });
 ```csharp
 Task<CommonResponse> RemoveGlobalVars(IEnumerable<string> names)
 ```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `names` | `IEnumerable<string>` | -- | Variable names to delete |
+
+**Returns:** `Task<CommonResponse>` — controller response
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
 
 ---
 
@@ -3790,6 +4327,19 @@ Task<double[]> AposToCposPose(
     double[]? externalAxisPositions = null)
 ```
 
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `jointDegrees` | `double[]` | -- | 6 joint angles in degrees |
+| `userFrame` | `double[]` | -- | User coordinate frame [x,y,z,rx,ry,rz] (mm + deg) |
+| `toolFrame` | `double[]` | -- | Tool coordinate frame [x,y,z,rx,ry,rz] (mm + deg) |
+| `externalAxisPositions` | `double[]?` | null | External axis positions |
+
+**`AposToCpos` Returns:** `Task<CommonResponse>` — controller response
+
+**`AposToCposPose` Returns:** `Task<double[]>` — [x,y,z,rx,ry,rz] in mm + deg
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
+
 All vectors must be exactly 6 elements. Units: degrees for joints, mm + deg for frames.
 
 ---
@@ -3821,6 +4371,18 @@ Task<double[]> CposToAposJoints(
     double[] referenceJointDegrees,
     double[]? externalAxisPositions = null)
 ```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `cartesianMmDeg` | `double[]` | -- | Cartesian pose [x,y,z,rx,ry,rz] in mm + deg |
+| `referenceJointDegrees` | `double[]` | -- | Reference joint angles (starting guess for IK solver) |
+| `externalAxisPositions` | `double[]?` | null | External axis positions |
+
+**`CposToApos` Returns:** `Task<CommonResponse>` — controller response
+
+**`CposToAposJoints` Returns:** `Task<double[]>` — 6 joint angles in degrees
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s), `InvalidOperationException` (no IK solution found)
 
 `referenceJointDegrees` is used as the starting guess. If the controller returns an empty array, an `InvalidOperationException` is thrown. Adjust the reference joints and retry.
 
@@ -3859,6 +4421,20 @@ Task<double[]> CalculateRelativePoseResult(
     double[]? tcpPoseInPosCoorFrame = null,
     double[]? userCoorFrame = null)
 ```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `tcpPoseWorld` | `double[]` | -- | Current TCP pose in world frame [x,y,z,rx,ry,rz] |
+| `offset` | `double[]` | -- | [dx,dy,dz,drx,dry,drz] offset |
+| `coorType` | `RelativePoseCoorType` | -- | User or Tool coordinate frame |
+| `tcpPoseInPosCoorFrame` | `double[]?` | null | TCP pose in position coordinate frame |
+| `userCoorFrame` | `double[]?` | null | User coordinate frame definition |
+
+**`CalculateRelativePose` Returns:** `Task<CommonResponse>` — controller response
+
+**`CalculateRelativePoseResult` Returns:** `Task<double[]>` — [x,y,z,rx,ry,rz] relative pose in mm + deg
+
+**Throws:** `CodroidCommandException` (controller error), `TimeoutException` (no response within 10s)
 
 #### RelativePoseCoorType
 

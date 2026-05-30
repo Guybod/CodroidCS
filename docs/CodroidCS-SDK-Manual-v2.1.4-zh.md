@@ -451,6 +451,10 @@ public async Task Connect()
 await robot.Connect();
 ```
 
+**返回值：** `Task` — 完成即表示连接成功
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
+
 ---
 
 #### ConnectRemoteAndSwitchOn
@@ -464,6 +468,10 @@ public async Task ConnectRemoteAndSwitchOn()
 ```csharp
 await robot.ConnectRemoteAndSwitchOn();
 ```
+
+**返回值：** `Task` — 完成即表示连接、切换远程、上电均成功
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
 
 ---
 
@@ -487,6 +495,10 @@ finally
 }
 ```
 
+**返回值：** 无
+
+**异常：** 无
+
 ---
 
 ### 2. 模式切换
@@ -500,16 +512,15 @@ public async Task<CommonResponse> SwitchOff()
 
 机器人上电 / 下电。
 
-| 方法 | 协议指令 |
-|------|----------|
-| `SwitchOn()` | `Robot/switchOn` |
-| `SwitchOff()` | `Robot/switchOff` |
-
 ```csharp
 await robot.SwitchOn();
 // ... 操作 ...
 await robot.SwitchOff();
 ```
+
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
 
 ---
 
@@ -523,11 +534,9 @@ public Task<CommonResponse> ToRemote()
 
 切换到手动 / 自动 / 远程模式。需要固件 2.3.2.6+。
 
-| 方法 | 协议指令 |
-|------|----------|
-| `ToManual()` | `Robot/toManual` |
-| `ToAuto()` | `Robot/toAuto` |
-| `ToRemote()` | `Robot/toRemote` |
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
 
 ---
 
@@ -544,6 +553,10 @@ public async Task<CommonResponse> EnterRemoteModeViaAuto()
 await robot.EnterRemoteModeViaAuto();
 ```
 
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
+
 ---
 
 #### ToSimulation / ToActual
@@ -554,6 +567,10 @@ public Task<CommonResponse> ToActual()
 ```
 
 切换到仿真 / 实机模式。
+
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
 
 ---
 
@@ -566,6 +583,10 @@ public Task<CommonResponse> StopDrag()
 
 进入 / 退出拖拽模式。需要固件 2.3.2.6+。
 
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
+
 ---
 
 #### ClearSystemError
@@ -576,9 +597,9 @@ public Task<CommonResponse> ClearSystemError()
 
 清除系统错误状态。
 
-| 方法 | 协议指令 |
-|------|----------|
-| `ClearSystemError()` | `System/clearError` |
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
 
 ---
 
@@ -606,6 +627,10 @@ public Task<CommonResponse> MovJ(CartesianPoint target, double speed, double acc
 | `tool` | `double[]?` | null | 工具坐标系。null 时指令中不包含该字段 |
 | `relativeBlend` | `double?` | null | 相对平滑比（0–1）。与 `blend` 互斥——同时传入时此参数无效 |
 
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
+
 ```csharp
 // 关节目标
 await robot.MovJ(JointPoint.Degrees(new[] { 0, 0, 90, 0, 90, 0 }), speed: 40, acc: 100);
@@ -626,6 +651,20 @@ public Task<CommonResponse> MovL(JointPoint target, double speed, double acc,
     double? blend = null, double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 ```
 
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `target` | `CartesianPoint` / `JointPoint` | — | 目标位置 |
+| `speed` | `double` | — | 速度（mm/s） |
+| `acc` | `double` | — | 加速度 |
+| `blend` | `double?` | null | 平滑半径。与 `relativeBlend` 互斥——同时传入时 `relativeBlend` 无效。不传表示无过渡 |
+| `coor` | `double[]?` | null | 用户坐标系。null 时指令中不包含该字段 |
+| `tool` | `double[]?` | null | 工具坐标系。null 时指令中不包含该字段 |
+| `relativeBlend` | `double?` | null | 相对平滑比（0–1）。与 `blend` 互斥——同时传入时此参数无效 |
+
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
+
 ```csharp
 // 笛卡尔直线运动
 await robot.MovL(CartesianPoint.MmDegWithRef(pose, robot.CriData.JointPosition),
@@ -645,10 +684,20 @@ public Task<CommonResponse> MovC(CartesianPoint middle, CartesianPoint target,
     double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 ```
 
-| 参数 | 类型 | 说明 |
-|------|------|------|
-| `middle` | `CartesianPoint` | 中间点（圆弧上） |
-| `target` | `CartesianPoint` | 终点 |
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `middle` | `CartesianPoint` | — | 中间点（圆弧上） |
+| `target` | `CartesianPoint` | — | 终点 |
+| `speed` | `double` | — | 速度（mm/s） |
+| `acc` | `double` | — | 加速度 |
+| `blend` | `double?` | null | 平滑半径。与 `relativeBlend` 互斥——同时传入时 `relativeBlend` 无效。不传表示无过渡 |
+| `coor` | `double[]?` | null | 用户坐标系。null 时指令中不包含该字段 |
+| `tool` | `double[]?` | null | 工具坐标系。null 时指令中不包含该字段 |
+| `relativeBlend` | `double?` | null | 相对平滑比（0–1）。与 `blend` 互斥——同时传入时此参数无效 |
+
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
 
 ```csharp
 await robot.MovC(
@@ -667,11 +716,21 @@ public Task<CommonResponse> MovCircle(CartesianPoint middle, CartesianPoint targ
     double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 ```
 
-| 参数 | 类型 | 说明 |
-|------|------|------|
-| `middle` | `CartesianPoint` | 中间点 |
-| `target` | `CartesianPoint` | 终点 |
-| `circleNum` | `int` | 整圆圈数 |
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `middle` | `CartesianPoint` | — | 中间点 |
+| `target` | `CartesianPoint` | — | 终点 |
+| `circleNum` | `int` | — | 整圆圈数 |
+| `speed` | `double` | — | 速度（mm/s） |
+| `acc` | `double` | — | 加速度 |
+| `blend` | `double?` | null | 平滑半径。与 `relativeBlend` 互斥——同时传入时 `relativeBlend` 无效。不传表示无过渡 |
+| `coor` | `double[]?` | null | 用户坐标系。null 时指令中不包含该字段 |
+| `tool` | `double[]?` | null | 工具坐标系。null 时指令中不包含该字段 |
+| `relativeBlend` | `double?` | null | 相对平滑比（0–1）。与 `blend` 互斥——同时传入时此参数无效 |
+
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
 
 ```csharp
 await robot.MovCircle(
@@ -689,6 +748,14 @@ public async Task<CommonResponse> Move(IReadOnlyList<MoveInstruction> instructio
 ```
 
 将一组运动指令作为单条路径命令发送。
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `instructions` | `IReadOnlyList<MoveInstruction>` | — | 运动指令列表 |
+
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
 
 ```csharp
 await robot.Move(new[]
@@ -719,6 +786,23 @@ public bool MovJSync(CartesianPoint target, double speed, double acc,
     double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 ```
 
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `target` | `JointPoint` / `CartesianPoint` | — | 目标位置 |
+| `speed` | `double` | — | 速度（deg/s） |
+| `acc` | `double` | — | 加速度 |
+| `wait` | `MotionWaitOptions?` | null | 等待选项（超时、容差等） |
+| `blend` | `double?` | null | 平滑半径。与 `relativeBlend` 互斥——同时传入时 `relativeBlend` 无效。不传表示无过渡 |
+| `coor` | `double[]?` | null | 用户坐标系。null 时指令中不包含该字段 |
+| `tool` | `double[]?` | null | 工具坐标系。null 时指令中不包含该字段 |
+| `relativeBlend` | `double?` | null | 相对平滑比（0–1）。与 `blend` 互斥——同时传入时此参数无效 |
+
+**返回值：** `bool` — 成功到达目标返回 `true`
+
+**异常：**
+- `TimeoutException` — 运动超时（由 `MotionWaitOptions.Timeout` 控制）
+- `InvalidOperationException` — 机器人处于异常状态（碰撞、急停、报警）或运动停止但未到达目标
+
 ```csharp
 var wait = new MotionWaitOptions
 {
@@ -743,6 +827,21 @@ public bool MovLSync(JointPoint target, double speed, double acc,
     double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 ```
 
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `target` | `CartesianPoint` / `JointPoint` | — | 目标位置 |
+| `speed` | `double` | — | 速度（mm/s） |
+| `acc` | `double` | — | 加速度 |
+| `wait` | `MotionWaitOptions?` | null | 等待选项 |
+| `blend` | `double?` | null | 平滑半径。与 `relativeBlend` 互斥——同时传入时 `relativeBlend` 无效。不传表示无过渡 |
+| `coor` | `double[]?` | null | 用户坐标系。null 时指令中不包含该字段 |
+| `tool` | `double[]?` | null | 工具坐标系。null 时指令中不包含该字段 |
+| `relativeBlend` | `double?` | null | 相对平滑比（0–1）。与 `blend` 互斥——同时传入时此参数无效 |
+
+**返回值：** `bool` — 成功到达目标返回 `true`
+
+**异常：** `TimeoutException`（运动超时）、`InvalidOperationException`（异常状态或未到达目标）
+
 ```csharp
 robot.MovLSync(
     CartesianPoint.MmDegWithRef(pose, robot.CriData.JointPosition),
@@ -765,6 +864,22 @@ public bool MovCSync(CartesianPoint middle, CartesianPoint target,
     double? blend = null, double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 ```
 
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `middle` | `CartesianPoint` | — | 中间点（圆弧上） |
+| `target` | `CartesianPoint` | — | 终点 |
+| `speed` | `double` | — | 速度（mm/s） |
+| `acc` | `double` | — | 加速度 |
+| `wait` | `MotionWaitOptions?` | null | 等待选项 |
+| `blend` | `double?` | null | 平滑半径。与 `relativeBlend` 互斥——同时传入时 `relativeBlend` 无效。不传表示无过渡 |
+| `coor` | `double[]?` | null | 用户坐标系。null 时指令中不包含该字段 |
+| `tool` | `double[]?` | null | 工具坐标系。null 时指令中不包含该字段 |
+| `relativeBlend` | `double?` | null | 相对平滑比（0–1）。与 `blend` 互斥——同时传入时此参数无效 |
+
+**返回值：** `bool` — 成功到达目标返回 `true`
+
+**异常：** `TimeoutException`（运动超时）、`InvalidOperationException`（异常状态或未到达目标）
+
 ```csharp
 robot.MovCSync(
     CartesianPoint.MmDeg(mid), CartesianPoint.MmDeg(end),
@@ -781,6 +896,23 @@ public bool MovCircleSync(CartesianPoint middle, CartesianPoint target,
     double? blend = null, double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 ```
 
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `middle` | `CartesianPoint` | — | 中间点 |
+| `target` | `CartesianPoint` | — | 终点 |
+| `circleNum` | `int` | — | 整圆圈数 |
+| `speed` | `double` | — | 速度（mm/s） |
+| `acc` | `double` | — | 加速度 |
+| `wait` | `MotionWaitOptions?` | null | 等待选项 |
+| `blend` | `double?` | null | 平滑半径。与 `relativeBlend` 互斥——同时传入时 `relativeBlend` 无效。不传表示无过渡 |
+| `coor` | `double[]?` | null | 用户坐标系。null 时指令中不包含该字段 |
+| `tool` | `double[]?` | null | 工具坐标系。null 时指令中不包含该字段 |
+| `relativeBlend` | `double?` | null | 相对平滑比（0–1）。与 `blend` 互斥——同时传入时此参数无效 |
+
+**返回值：** `bool` — 成功到达目标返回 `true`
+
+**异常：** `TimeoutException`（运动超时）、`InvalidOperationException`（异常状态或未到达目标）
+
 ---
 
 #### MoveSync
@@ -790,6 +922,15 @@ public bool MoveSync(IReadOnlyList<MoveInstruction> instructions, MotionWaitOpti
 ```
 
 发送多段路径并阻塞直到最后一段目标到达。
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `instructions` | `IReadOnlyList<MoveInstruction>` | — | 运动指令列表 |
+| `wait` | `MotionWaitOptions?` | null | 等待选项 |
+
+**返回值：** `bool` — 成功到达目标返回 `true`
+
+**异常：** `TimeoutException`（运动超时）、`InvalidOperationException`（异常状态或未到达目标）
 
 ```csharp
 robot.MoveSync(new[]
@@ -809,7 +950,11 @@ robot.MoveSync(new[]
 public async Task<CommonResponse> PauseRobotMotion()
 ```
 
-暂停当前运动。协议指令：`Robot/pause`。
+暂停当前运动。
+
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
 
 ---
 
@@ -819,7 +964,11 @@ public async Task<CommonResponse> PauseRobotMotion()
 public async Task<CommonResponse> ResumeRobotMotion()
 ```
 
-恢复暂停的运动。协议指令：`Robot/resume`。
+恢复暂停的运动。
+
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
 
 ---
 
@@ -829,7 +978,11 @@ public async Task<CommonResponse> ResumeRobotMotion()
 public async Task<CommonResponse> StopRobotMove()
 ```
 
-立即停止当前运动。协议指令：`Robot/stopMove`。
+立即停止当前运动。
+
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
 
 ---
 
@@ -843,9 +996,14 @@ public async Task<CommonResponse> MoveTo(MoveToKind kind, MoveToTarget? target =
 
 移动到预设或规划位置。运行期间需要心跳。
 
-| 方法 | 协议指令 |
-|------|----------|
-| `MoveTo(kind, target)` | `Robot/moveTo` |
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `kind` | `MoveToKind` | — | 目标类型（Home、Safe、JointPlanned 等） |
+| `target` | `MoveToTarget?` | null | 规划目标点（仅 JointPlanned/LinePlanned 时需要） |
+
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
 
 ```csharp
 // 移动到原点
@@ -868,6 +1026,10 @@ public async Task<CommonResponse> MoveToHeartbeat()
 
 发送心跳以维持 MoveTo 运动。约每 500ms 调用一次。
 
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
+
 ---
 
 #### StopMoveTo
@@ -877,6 +1039,10 @@ public async Task<CommonResponse> StopMoveTo()
 ```
 
 停止当前 MoveTo / RunTo 运动。
+
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
 
 ---
 
@@ -889,6 +1055,14 @@ public async Task<CommonResponse> StartJog(RobotJogParameters parameters)
 ```
 
 启动 Jog。需要约每 500ms 发送心跳。
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `parameters` | `RobotJogParameters` | — | 点动参数（模式、速度、轴索引、坐标系） |
+
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
 
 ```csharp
 var jogParams = RobotJogParameters.Create(
@@ -919,7 +1093,11 @@ await robot.StopJog();
 public async Task<CommonResponse> StopJog()
 ```
 
-停止 Jog。协议指令：`Robot/stopJog`。
+停止 Jog。
+
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
 
 ---
 
@@ -930,6 +1108,10 @@ public async Task<CommonResponse> JogHeartbeat()
 ```
 
 发送心跳以维持 Jog 状态。约每 500ms 调用一次。
+
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
 
 ---
 
@@ -944,12 +1126,13 @@ public async Task<double> GetAi(int port)   // 读取模拟输入
 public async Task<double> GetAo(int port)   // 读取模拟输出
 ```
 
-| 方法 | 返回值 | 协议指令 |
-|------|--------|----------|
-| `GetDi(port)` | `int`（0 或 1） | `IOManager/GetIOValue` |
-| `GetDo(port)` | `int`（0 或 1） | `IOManager/GetIOValue` |
-| `GetAi(port)` | `double` | `IOManager/GetIOValue` |
-| `GetAo(port)` | `double` | `IOManager/GetIOValue` |
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `port` | `int` | — | IO 端口号 |
+
+**返回值：** `GetDi`/`GetDo` → `Task<int>`（0 或 1）；`GetAi`/`GetAo` → `Task<double>`
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
 
 ```csharp
 int di0 = await robot.GetDi(0);
@@ -968,10 +1151,14 @@ public async Task<CommonResponse> SetDo(int port, int value)     // 写入 DO（
 public async Task<CommonResponse> SetAo(int port, double value)  // 写入 AO
 ```
 
-| 方法 | 协议指令 |
-|------|----------|
-| `SetDo(port, value)` | `IOManager/SetIOValue` |
-| `SetAo(port, value)` | `IOManager/SetIOValue` |
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `port` | `int` | — | IO 端口号 |
+| `value` | `int` / `double` | — | 写入值（`SetDo` 为 0 或 1，`SetAo` 为浮点值） |
+
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）、`ArgumentOutOfRangeException`（`SetDo` 的 value 不是 0 或 1）
 
 ```csharp
 await robot.SetDo(10, 1);   // 设置 DO 10 为高
@@ -986,6 +1173,14 @@ await robot.SetAo(0, 3.14); // 设置 AO 0 为 3.14
 ```csharp
 public async Task<CommonResponse> GetIoValues(IReadOnlyList<(string Type, int Port)> pins)
 ```
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `pins` | `IReadOnlyList<(string Type, int Port)>` | — | IO 点列表，Type 为 `"DI"`/`"DO"`/`"AI"`/`"AO"` |
+
+**返回值：** `Task<CommonResponse>` — 结果在 `resp.db` 中
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
 
 ```csharp
 var pins = new (string Type, int Port)[]
@@ -1007,6 +1202,14 @@ CommonResponse resp = await robot.GetIoValues(pins);
 public async Task<RegisterReadValue> GetRegisterValue(int address)
 ```
 
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `address` | `int` | — | 寄存器地址 |
+
+**返回值：** `Task<RegisterReadValue>` — 包含地址和原始 JSON 值，可用 `GetInt32()`/`GetDouble()` 转换
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
+
 ```csharp
 RegisterReadValue reg = await robot.GetRegisterValue(49100);
 int intVal = reg.GetInt32();
@@ -1020,6 +1223,14 @@ double dblVal = reg.GetDouble();
 ```csharp
 public async Task<IReadOnlyList<RegisterReadValue>> GetRegisterValues(IReadOnlyList<int> addresses)
 ```
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `addresses` | `IReadOnlyList<int>` | — | 寄存器地址列表 |
+
+**返回值：** `Task<IReadOnlyList<RegisterReadValue>>` — 寄存器值列表，顺序与输入地址一致
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
 
 ```csharp
 var addresses = new[] { 49100, 49101, 49102 };
@@ -1038,6 +1249,15 @@ public async Task<CommonResponse> SetRegisterValue(int address, int value)
 public async Task<CommonResponse> SetRegisterValue(int address, double value)
 ```
 
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `address` | `int` | — | 寄存器地址 |
+| `value` | `int` / `double` | — | 写入值（整型或浮点） |
+
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
+
 ```csharp
 await robot.SetRegisterValue(49100, 42);
 await robot.SetRegisterValue(49101, 3.14);
@@ -1053,6 +1273,15 @@ public async Task<CommonResponse> RemoveExtendArray(int index)
 ```
 
 管理扩展数组元素（索引 0~999）。
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `index` | `int` | — | 扩展数组索引（0~999） |
+| `type` | `string` | — | 数据类型（仅 `SetExtendArrayType`） |
+
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）、`ArgumentOutOfRangeException`（索引超出范围）、`ArgumentException`（类型无效，仅 `SetExtendArrayType`）
 
 ```csharp
 await robot.SetExtendArrayType(0, RegisterExtendArrayValueType.Int32);
@@ -1072,6 +1301,14 @@ public async Task<CommonResponse> SetAutoMoveRate(int percent)
 
 设置手动/自动运动倍率（1~100%）。
 
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `percent` | `int` | — | 运动倍率百分比，范围 1~100 |
+
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）、`ArgumentOutOfRangeException`（percent 超出 1~100）
+
 ```csharp
 await robot.SetManualMoveRate(50);  // 50% 速度
 await robot.SetAutoMoveRate(100);   // 全速
@@ -1087,6 +1324,14 @@ public async Task<CommonResponse> SetCollisionSensitivity(int sensitivity)
 
 设置碰撞检测灵敏度（0~100）。固件 2.3.2.10+。
 
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `sensitivity` | `int` | — | 碰撞检测灵敏度，范围 0~100 |
+
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）、`ArgumentOutOfRangeException`（sensitivity 超出 0~100）
+
 ```csharp
 await robot.SetCollisionSensitivity(50);
 ```
@@ -1101,6 +1346,14 @@ public async Task<CommonResponse> SetPayload(int payloadId)
 
 设置当前载荷槽位（0~15）。固件 2.3.2.10+。
 
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `payloadId` | `int` | — | 载荷槽位编号，范围 0~15 |
+
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）、`ArgumentOutOfRangeException`（payloadId 超出 0~15）
+
 ```csharp
 await robot.SetPayload(1); // 使用载荷槽位 1
 ```
@@ -1114,6 +1367,10 @@ public async Task<RobotParameters> GetRobotParameters()
 ```
 
 获取所有设置界面参数（协议 19.7）。返回工具坐标系、载荷坐标系、用户坐标系及默认 ID。
+
+**返回值：** `Task<RobotParameters>` — 机器人完整参数集
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
 
 ```csharp
 RobotParameters param = await robot.GetRobotParameters();
@@ -1134,6 +1391,14 @@ public Task<CommonResponse> SetDefaultUserCoordinateId(int coordinateId) // 0~15
 
 设置默认载荷/工具/用户坐标系槽位。
 
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `payloadId` / `toolId` / `coordinateId` | `int` | — | 槽位编号，范围 0~15 |
+
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）、`ArgumentOutOfRangeException`（id 超出 0~15）
+
 ```csharp
 await robot.SetDefaultToolId(2);
 await robot.SetDefaultPayloadId(1);
@@ -1150,6 +1415,23 @@ public async Task<CommonResponse> SetToolFrame(int frameId, RobotFrame frame)
 ```
 
 保存完整工具坐标系表（必须包含 id 0~15，id=0 必须全零）/ 修改单个工具坐标系（先读后写，仅 id 1~15）。
+
+**SaveToolFrames 参数：**
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `frames` | `IReadOnlyList<RobotFrame>` | — | 工具坐标系列表，须包含 id 0~15，id=0 必须全零 |
+
+**SetToolFrame 参数：**
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `frameId` | `int` | — | 工具坐标系编号，范围 1~15 |
+| `frame` | `RobotFrame` | — | 坐标系定义 |
+
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）、`ArgumentOutOfRangeException`（frameId 超出范围）
 
 ```csharp
 // 设置单个工具坐标系
@@ -1170,6 +1452,23 @@ public async Task<CommonResponse> SetPayloadFrame(int frameId, RobotPayloadFrame
 
 保存完整载荷坐标系表 / 修改单个载荷坐标系（id 1~15）。
 
+**SavePayloadFrames 参数：**
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `frames` | `IReadOnlyList<RobotPayloadFrame>` | — | 载荷坐标系列表，须包含 id 0~15 |
+
+**SetPayloadFrame 参数：**
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `frameId` | `int` | — | 载荷坐标系编号，范围 1~15 |
+| `frame` | `RobotPayloadFrame` | — | 载荷坐标系定义 |
+
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）、`ArgumentOutOfRangeException`（frameId 超出范围）
+
 ```csharp
 await robot.SetPayloadFrame(1, new RobotPayloadFrame
 {
@@ -1187,6 +1486,23 @@ public async Task<CommonResponse> SetUserCoordinateFrame(int frameId, RobotFrame
 ```
 
 保存完整用户坐标系表 / 修改单个用户坐标系（id 1~15）。
+
+**SaveUserCoordinateFrames 参数：**
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `frames` | `IReadOnlyList<RobotFrame>` | — | 用户坐标系列表，须包含 id 0~15 |
+
+**SetUserCoordinateFrame 参数：**
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `frameId` | `int` | — | 用户坐标系编号，范围 1~15 |
+| `frame` | `RobotFrame` | — | 坐标系定义 |
+
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）、`ArgumentOutOfRangeException`（frameId 超出范围）
 
 ```csharp
 await robot.SetUserCoordinateFrame(1, new RobotFrame
@@ -1207,9 +1523,18 @@ public async Task<CommonResponse> StartCriDataPush(string udpIp, int udpPort)
 
 启动本地 UDP 监听并请求控制器推送 CRI 实时数据。固定参数：100ms 周期、高精度、mask 0xFFFF、308 字节 UDP 包。
 
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `udpIp` | `string` | — | 本地 IP 地址，用于接收 UDP 数据 |
+| `udpPort` | `int` | — | 本地端口号 |
+
 | 方法 | 协议指令 |
 |------|----------|
 | `StartCriDataPush(udpIp, udpPort)` | `CRI/StartDataPush` |
+
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
 
 ```csharp
 await robot.StartCriDataPush("192.168.8.150", 18888);
@@ -1230,9 +1555,18 @@ public async Task<CommonResponse> StopCriDataPush(string? udpIp = null, int? udp
 
 请求控制器停止 CRI 数据推送并关闭本地 UDP 监听。
 
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `udpIp` | `string?` | null | 本地 IP 地址（可选） |
+| `udpPort` | `int?` | null | 本地端口号（可选） |
+
 | 方法 | 协议指令 |
 |------|----------|
 | `StopCriDataPush(ip, port)` | `CRI/StopDataPush` |
+
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
 
 ```csharp
 await robot.StopCriDataPush("192.168.8.150", 18888);
@@ -1260,6 +1594,10 @@ public async Task<CommonResponse> StartCriControl(int filterType = 1, int durati
 |------|----------|
 | `StartCriControl(...)` | `CRI/StartControl` |
 
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
+
 ```csharp
 await robot.StartCriControl(filterType: 1, durationMs: 4, startBuffer: 5);
 ```
@@ -1273,6 +1611,10 @@ public async Task<CommonResponse> StopCriControl()
 ```
 
 禁用 CRI 实时控制模式。
+
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
 
 | 方法 | 协议指令 |
 |------|----------|
@@ -1290,6 +1632,10 @@ public async Task<CommonResponse> EnterRemoteScriptMode()
 
 请求进入远程脚本模式。
 
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
+
 ---
 
 #### RunScript
@@ -1304,6 +1650,18 @@ public async Task<CommonResponse> RunScript(
 ```
 
 发送脚本立即执行。
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `mainScript` | `string` | — | 主脚本内容 |
+| `subThreads` | `IReadOnlyDictionary<string, string>?` | null | 子线程脚本 |
+| `subPrograms` | `IReadOnlyDictionary<string, string>?` | null | 子程序脚本 |
+| `interrupts` | `IReadOnlyDictionary<string, string>?` | null | 中断处理脚本 |
+| `vars` | `IReadOnlyDictionary<string, object>?` | null | 注入变量 |
+
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
 
 ```csharp
 await robot.RunScript(mainScript: "movej(j1, v50) sub1() end");
@@ -1320,6 +1678,28 @@ public async Task<CommonResponse> RunStep(string projectID)
 ```
 
 按 ID / 索引启动项目 / 单步执行。
+
+**Run 参数：**
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `projectID` | `string` | — | 项目 ID |
+
+**RunByIndex 参数：**
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `index` | `int` | — | 项目索引 |
+
+**RunStep 参数：**
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `projectID` | `string` | — | 项目 ID |
+
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
 
 ```csharp
 await robot.Run("project_001");
@@ -1343,6 +1723,10 @@ public async Task<CommonResponse> StopProject()
 | `ResumeProject()` | `project/resume` |
 | `StopProject()` | `project/stop` |
 
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
+
 ---
 
 ### 14. 发布订阅
@@ -1355,6 +1739,16 @@ public async Task<PublishTopicSubscription> SubscribePublishTopic(
 ```
 
 订阅 TCP 主题推送。返回可释放的订阅句柄。
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `topicTy` | `string` | — | 主题名，如 `PublishTopics.RobotStatus` |
+| `handler` | `Action<PublishNotification>` | — | 处理通知的回调 |
+| `tcMilliseconds` | `int` | 100 | 协议 `tc` 字段（毫秒） |
+
+**返回值：** `Task<PublishTopicSubscription>` — 可释放的订阅句柄
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
 
 ```csharp
 using var sub = await robot.SubscribePublishTopic(
@@ -1389,6 +1783,12 @@ foreach (var (name, entry) in catalog)
 }
 ```
 
+**返回值：**
+- `GetGlobalVars` — `Task<CommonResponse>`（控制器响应）
+- `GetGlobalVarsCatalog` — `Task<IReadOnlyDictionary<string, GlobalVarCatalogEntry>>`（变量目录）
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
+
 ---
 
 #### SaveGlobalVar / SaveGlobalVars
@@ -1410,6 +1810,24 @@ await robot.SaveGlobalVars(new[]
 });
 ```
 
+**SaveGlobalVar 参数：**
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `name` | `string` | — | 变量名（须通过 `GlobalVarNaming.Validate` 校验） |
+| `value` | `object` | — | 变量值（可 JSON 序列化或 `GlobalVarRawJson`） |
+| `remark` | `string?` | null | 备注信息 |
+
+**SaveGlobalVars 参数：**
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `items` | `IReadOnlyCollection<GlobalVarSaveItem>` | — | 要保存的变量集合 |
+
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）、`ArgumentException`（变量名无效）
+
 ---
 
 #### RemoveGlobalVars
@@ -1419,6 +1837,14 @@ public async Task<CommonResponse> RemoveGlobalVars(IEnumerable<string> names)
 ```
 
 删除指定全局变量。删除不存在的变量不会报错。
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `names` | `IEnumerable<string>` | — | 要删除的变量名集合 |
+
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
 
 ```csharp
 await robot.RemoveGlobalVars(new[] { "counter", "x", "y" });
@@ -1436,6 +1862,19 @@ public async Task<double[]> AposToCposPose(double[] jointDegrees, double[] userF
 ```
 
 正运动学：关节空间 -> 笛卡尔空间。`AposToCposPose` 返回 [x,y,z,rx,ry,rz]，单位 mm+deg。
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `jointDegrees` | `double[]` | — | 6 个关节角度（度） |
+| `userFrame` | `double[]` | — | 用户坐标系 [x,y,z,rx,ry,rz] |
+| `toolFrame` | `double[]` | — | 工具坐标系 [x,y,z,rx,ry,rz] |
+| `externalAxisPositions` | `double[]?` | null | 外部轴位置 |
+
+**返回值：**
+- `AposToCpos` — `Task<CommonResponse>`（控制器响应）
+- `AposToCposPose` — `Task<double[]>`（笛卡尔位姿 [x,y,z,rx,ry,rz]，单位 mm+deg）
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
 
 ```csharp
 double[] joints = { 0, 0, 90, 0, 90, 0 };
@@ -1457,6 +1896,18 @@ public async Task<double[]> CposToAposJoints(double[] cartesianMmDeg, double[] r
 ```
 
 逆运动学：笛卡尔 -> 关节空间。`CposToAposJoints` 返回 6 个关节角度（度）。
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `cartesianMmDeg` | `double[]` | — | TCP 位姿 [x,y,z,rx,ry,rz]，单位 mm+deg |
+| `referenceJointDegrees` | `double[]` | — | 参考关节角度，用作 IK 起始猜测 |
+| `externalAxisPositions` | `double[]?` | null | 外部轴位置 |
+
+**返回值：**
+- `CposToApos` — `Task<CommonResponse>`（控制器响应）
+- `CposToAposJoints` — `Task<double[]>`（6 个关节角度，单位 deg）
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）、`InvalidOperationException`（无解）
 
 ```csharp
 double[] pose = { 400, 0, 300, 180, 0, 0 };
@@ -1494,6 +1945,12 @@ double[] newPose = await robot.CalculateRelativePoseResult(
 
 Console.WriteLine($"新位姿: [{string.Join(", ", newPose)}]");
 ```
+
+**返回值：**
+- `CalculateRelativePose` — `Task<CommonResponse>`（控制器响应）
+- `CalculateRelativePoseResult` — `Task<double[]>`（计算后的位姿 `[x,y,z,rx,ry,rz]`）
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
 
 <div style="page-break-after: always;"></div>
 
@@ -2914,6 +3371,14 @@ Console.WriteLine($"DI 0 = {di0}");
 Task<int> GetDi(int port)
 ```
 
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `port` | `int` | — | 端口号 |
+
+**返回值：** `Task<int>` — 0 或 1
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
+
 ---
 
 #### GetDo -- 读取数字输出
@@ -2928,6 +3393,14 @@ Console.WriteLine($"DO 10 = {do10}");
 ```csharp
 Task<int> GetDo(int port)
 ```
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `port` | `int` | — | 端口号 |
+
+**返回值：** `Task<int>` — 0 或 1
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
 
 ---
 
@@ -2944,6 +3417,14 @@ Console.WriteLine($"AI 1 = {ai1:F3}");
 Task<double> GetAi(int port)
 ```
 
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `port` | `int` | — | 端口号 |
+
+**返回值：** `Task<double>` — 模拟输入值
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
+
 ---
 
 #### GetAo -- 读取模拟输出
@@ -2958,6 +3439,14 @@ Console.WriteLine($"AO 2 = {ao2:F3}");
 ```csharp
 Task<double> GetAo(int port)
 ```
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `port` | `int` | — | 端口号 |
+
+**返回值：** `Task<double>` — 模拟输出值
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
 
 ---
 
@@ -2974,7 +3463,14 @@ await robot.SetDo(10, 0);  // 设为 OFF
 Task<CommonResponse> SetDo(int port, int value)
 ```
 
-如果 `value` 不是 `0` 或 `1`，抛出 `ArgumentOutOfRangeException`。
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `port` | `int` | — | 端口号 |
+| `value` | `int` | — | 0 或 1 |
+
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）、`ArgumentOutOfRangeException`（value 不是 0 或 1）
 
 ---
 
@@ -2989,6 +3485,15 @@ await robot.SetAo(2, 3.14);
 ```csharp
 Task<CommonResponse> SetAo(int port, double value)
 ```
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `port` | `int` | — | 端口号 |
+| `value` | `double` | — | 模拟输出值 |
+
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
 
 ---
 
@@ -3013,6 +3518,14 @@ double ao2 = IoGetResponseParser.ParseAnalog(resp, IoPortKind.Ao, 2);
 ```csharp
 Task<CommonResponse> GetIoValues(IReadOnlyList<(string Type, int Port)> pins)
 ```
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `pins` | `IReadOnlyList<(string Type, int Port)>` | — | IO 点列表 |
+
+**返回值：** `Task<CommonResponse>` — 控制器响应，`db` 为 JSON 数组
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
 
 ---
 
@@ -3070,6 +3583,14 @@ else
 Task<RegisterReadValue> GetRegisterValue(int address)
 ```
 
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `address` | `int` | — | 寄存器地址 |
+
+**返回值：** `Task<RegisterReadValue>` — 寄存器读取结果
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
+
 ---
 
 #### GetRegisterValues -- 批量读取寄存器
@@ -3090,6 +3611,14 @@ foreach (var r in regs)
 Task<IReadOnlyList<RegisterReadValue>> GetRegisterValues(IReadOnlyList<int> addresses)
 ```
 
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `addresses` | `IReadOnlyList<int>` | — | 寄存器地址列表 |
+
+**返回值：** `Task<IReadOnlyList<RegisterReadValue>>` — 寄存器读取结果列表
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
+
 ---
 
 #### SetRegisterValue (int) -- 写入寄存器整型值
@@ -3103,6 +3632,15 @@ await robot.SetRegisterValue(49100, 0);  // 清零
 Task<CommonResponse> SetRegisterValue(int address, int value)
 ```
 
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `address` | `int` | — | 寄存器地址 |
+| `value` | `int` | — | 整型值 |
+
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
+
 ---
 
 #### SetRegisterValue (double) -- 写入寄存器浮点值
@@ -3115,6 +3653,15 @@ await robot.SetRegisterValue(49300, 0.0);  // 清零
 ```csharp
 Task<CommonResponse> SetRegisterValue(int address, double value)
 ```
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `address` | `int` | — | 寄存器地址 |
+| `value` | `double` | — | 浮点值 |
+
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）
 
 ---
 
@@ -3131,7 +3678,14 @@ await robot.SetExtendArrayType(5, RegisterExtendArrayValueType.Float32);
 Task<CommonResponse> SetExtendArrayType(int index, string type)
 ```
 
-如果 `index` 不在 0~999 范围内，抛出 `ArgumentOutOfRangeException`。
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `index` | `int` | — | 索引（0~999） |
+| `type` | `string` | — | 数据类型 |
+
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）、`ArgumentOutOfRangeException`（index 超出范围）、`ArgumentException`（type 无效）
 
 ---
 
@@ -3146,6 +3700,14 @@ await robot.RemoveExtendArray(0);
 ```csharp
 Task<CommonResponse> RemoveExtendArray(int index)
 ```
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `index` | `int` | — | 索引（0~999） |
+
+**返回值：** `Task<CommonResponse>` — 控制器响应
+
+**异常：** `CodroidCommandException`（控制器返回错误）、`TimeoutException`（10 秒未响应）、`ArgumentOutOfRangeException`（index 超出范围）
 
 ---
 
