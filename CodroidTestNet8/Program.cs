@@ -842,6 +842,14 @@ internal static class Program
                 wait);
             PrintOk($"完成：MoveSync(path) 返回 {ok}");
 
+            PrintStep(5, "MovLSync + blend=10 (平滑过渡)");
+            robot.MovLSync(p1Cart, speed: 150, acc: 500, blend: 10, wait: wait);
+            PrintOk("完成：blend 平滑过渡");
+
+            PrintStep(6, "MovJSync + relativeBlend=0.5 (相对平滑)");
+            robot.MovJSync(homeJ, speed: 40, acc: 100, relativeBlend: 0.5, wait: wait);
+            PrintOk("完成：relativeBlend 相对平滑");
+
             PrintBanner("syncmotion 测试完成", ConsoleColor.Green);
         }
         catch (Exception ex)
