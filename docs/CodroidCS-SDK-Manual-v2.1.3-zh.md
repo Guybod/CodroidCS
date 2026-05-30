@@ -590,10 +590,10 @@ public Task<CommonResponse> ClearSystemError()
 
 ```csharp
 public Task<CommonResponse> MovJ(JointPoint target, double speed, double acc,
-    double blend = 25, double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
+    double? blend = null, double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 
 public Task<CommonResponse> MovJ(CartesianPoint target, double speed, double acc,
-    double blend = 25, double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
+    double? blend = null, double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 ```
 
 | 参数 | 类型 | 默认值 | 说明 |
@@ -601,10 +601,10 @@ public Task<CommonResponse> MovJ(CartesianPoint target, double speed, double acc
 | `target` | `JointPoint` / `CartesianPoint` | -- | 目标位置 |
 | `speed` | `double` | -- | 速度 |
 | `acc` | `double` | -- | 加速度 |
-| `blend` | `double` | 25 | 平滑半径 |
-| `coor` | `double[]?` | null | 用户坐标系 |
-| `tool` | `double[]?` | null | 工具坐标系 |
-| `relativeBlend` | `double?` | null | 相对平滑 |
+| `blend` | `double?` | null | 平滑半径。与 `relativeBlend` 互斥——同时传入时 `relativeBlend` 无效。不传表示无过渡 |
+| `coor` | `double[]?` | null | 用户坐标系。null 时指令中不包含该字段 |
+| `tool` | `double[]?` | null | 工具坐标系。null 时指令中不包含该字段 |
+| `relativeBlend` | `double?` | null | 相对平滑比（0–1）。与 `blend` 互斥——同时传入时此参数无效 |
 
 ```csharp
 // 关节目标
@@ -620,10 +620,10 @@ await robot.MovJ(CartesianPoint.MmDeg(new[] { 400, 0, 300, 180, 0, 0 }), speed: 
 
 ```csharp
 public Task<CommonResponse> MovL(CartesianPoint target, double speed, double acc,
-    double blend = 25, double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
+    double? blend = null, double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 
 public Task<CommonResponse> MovL(JointPoint target, double speed, double acc,
-    double blend = 25, double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
+    double? blend = null, double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 ```
 
 ```csharp
@@ -641,7 +641,7 @@ await robot.MovL(JointPoint.Degrees(new[] { 10, 20, 90, 0, 90, 0 }), speed: 100,
 
 ```csharp
 public Task<CommonResponse> MovC(CartesianPoint middle, CartesianPoint target,
-    double speed, double acc, double blend = 25,
+    double speed, double acc, double? blend = null,
     double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 ```
 
@@ -663,7 +663,7 @@ await robot.MovC(
 
 ```csharp
 public Task<CommonResponse> MovCircle(CartesianPoint middle, CartesianPoint target,
-    int circleNum, double speed, double acc, double blend = 25,
+    int circleNum, double speed, double acc, double? blend = null,
     double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 ```
 
@@ -711,11 +711,11 @@ await robot.Move(new[]
 
 ```csharp
 public bool MovJSync(JointPoint target, double speed, double acc,
-    MotionWaitOptions? wait = null, double blend = 25,
+    MotionWaitOptions? wait = null, double? blend = null,
     double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 
 public bool MovJSync(CartesianPoint target, double speed, double acc,
-    MotionWaitOptions? wait = null, double blend = 25,
+    MotionWaitOptions? wait = null, double? blend = null,
     double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 ```
 
@@ -735,11 +735,11 @@ robot.MovJSync(JointPoint.Degrees(new[] { 0, 0, 90, 0, 90, 0 }), 40, 100, wait);
 
 ```csharp
 public bool MovLSync(CartesianPoint target, double speed, double acc,
-    MotionWaitOptions? wait = null, double blend = 25,
+    MotionWaitOptions? wait = null, double? blend = null,
     double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 
 public bool MovLSync(JointPoint target, double speed, double acc,
-    MotionWaitOptions? wait = null, double blend = 25,
+    MotionWaitOptions? wait = null, double? blend = null,
     double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 ```
 
@@ -762,7 +762,7 @@ robot.MovLSync(
 ```csharp
 public bool MovCSync(CartesianPoint middle, CartesianPoint target,
     double speed, double acc, MotionWaitOptions? wait = null,
-    double blend = 25, double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
+    double? blend = null, double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 ```
 
 ```csharp
@@ -778,7 +778,7 @@ robot.MovCSync(
 ```csharp
 public bool MovCircleSync(CartesianPoint middle, CartesianPoint target,
     int circleNum, double speed, double acc, MotionWaitOptions? wait = null,
-    double blend = 25, double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
+    double? blend = null, double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 ```
 
 ---
@@ -1641,8 +1641,8 @@ var movePointFromCart = MovePoint.FromCartesian(cp);
 | `CircleNum` | `int?` | `null` | 整圆圈数（仅用于 `movCircle`） |
 | `Speed` | `double` | -- | 速度值（直线 mm/s，关节 deg/s） |
 | `Acc` | `double` | -- | 加速度值 |
-| `Blend` | `double` | -- | 混合半径（直线 mm，关节 deg） |
-| `RelativeBlend` | `double?` | `null` | 相对混合比（0--1），设置时覆盖 `Blend` |
+| `Blend` | `double?` | `null` | 混合半径（直线 mm，关节 deg）。与 `RelativeBlend` 互斥。不传表示无过渡 |
+| `RelativeBlend` | `double?` | `null` | 相对混合比（0--1）。与 `Blend` 互斥——同时设置时此属性无效 |
 | `TargetPoint` | `MovePoint` | -- | 本段的目标点 |
 | `MiddlePoint` | `MovePoint?` | `null` | 中间/经过点（`movC` 和 `movCircle` 必需） |
 | `Coor` | `double[]?` | `null` | 坐标系定义 |
@@ -1667,10 +1667,10 @@ var movePointFromCart = MovePoint.FromCartesian(cp);
 |------|------|--------|------|
 | `speed` | `double` | -- | 必需。速度（mm/s 或 deg/s） |
 | `acc` | `double` | -- | 必需。加速度 |
-| `blend` | `double` | `25` | 混合半径 |
-| `coor` | `double[]?` | `null` | 坐标系 |
-| `tool` | `double[]?` | `null` | 工具偏移 |
-| `relativeBlend` | `double?` | `null` | 相对混合比（0--1） |
+| `blend` | `double?` | `null` | 混合半径。与 `relativeBlend` 互斥——同时传入时 `relativeBlend` 无效。不传表示无过渡 |
+| `coor` | `double[]?` | `null` | 用户坐标系。null 时指令中不包含该字段 |
+| `tool` | `double[]?` | `null` | 工具坐标系。null 时指令中不包含该字段 |
+| `relativeBlend` | `double?` | `null` | 相对混合比（0--1）。与 `blend` 互斥——同时传入时此参数无效 |
 
 #### 示例
 

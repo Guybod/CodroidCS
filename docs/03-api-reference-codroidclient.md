@@ -236,10 +236,10 @@ All motion methods send the command and return immediately. Use `*Sync` variants
 
 ```csharp
 public Task<CommonResponse> MovJ(JointPoint target, double speed, double acc,
-    double blend = 25, double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
+    double? blend = null, double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 
 public Task<CommonResponse> MovJ(CartesianPoint target, double speed, double acc,
-    double blend = 25, double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
+    double? blend = null, double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 ```
 
 | Parameter | Type | Default | Description / 说明 |
@@ -247,10 +247,10 @@ public Task<CommonResponse> MovJ(CartesianPoint target, double speed, double acc
 | `target` | `JointPoint` / `CartesianPoint` | — | Target position / 目标位置 |
 | `speed` | `double` | — | Speed / 速度 |
 | `acc` | `double` | — | Acceleration / 加速度 |
-| `blend` | `double` | 25 | Blend radius / 平滑半径 |
-| `coor` | `double[]?` | null | User coordinate frame / 用户坐标系 |
-| `tool` | `double[]?` | null | Tool coordinate frame / 工具坐标系 |
-| `relativeBlend` | `double?` | null | Relative blend / 相对平滑 |
+| `blend` | `double?` | null | Blend radius. Mutually exclusive with `relativeBlend` — if both set, `relativeBlend` is ignored. Omit for no transition / 平滑半径。与 `relativeBlend` 互斥——同时传入时 `relativeBlend` 无效。不传表示无过渡 |
+| `coor` | `double[]?` | null | User coordinate frame. `null` = omitted from command / 用户坐标系。`null` 时指令中不包含该字段 |
+| `tool` | `double[]?` | null | Tool coordinate frame. `null` = omitted from command / 工具坐标系。`null` 时指令中不包含该字段 |
+| `relativeBlend` | `double?` | null | Relative blend (0–1). Mutually exclusive with `blend` — if both set, this is ignored / 相对平滑比（0–1）。与 `blend` 互斥——同时传入时此参数无效 |
 
 ```csharp
 // Joint target / 关节目标
@@ -266,11 +266,21 @@ await robot.MovJ(CartesianPoint.MmDeg(new[] { 400, 0, 300, 180, 0, 0 }), speed: 
 
 ```csharp
 public Task<CommonResponse> MovL(CartesianPoint target, double speed, double acc,
-    double blend = 25, double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
+    double? blend = null, double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 
 public Task<CommonResponse> MovL(JointPoint target, double speed, double acc,
-    double blend = 25, double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
+    double? blend = null, double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 ```
+
+| Parameter | Type | Default | Description / 说明 |
+|-----------|------|---------|-------------------|
+| `target` | `CartesianPoint` / `JointPoint` | — | Target position / 目标位置 |
+| `speed` | `double` | — | Speed (mm/s for linear) / 速度（直线 mm/s） |
+| `acc` | `double` | — | Acceleration / 加速度 |
+| `blend` | `double?` | null | Blend radius (mm). Mutually exclusive with `relativeBlend` — if both set, `relativeBlend` is ignored. Omit for no transition / 平滑半径（mm）。与 `relativeBlend` 互斥——同时传入时 `relativeBlend` 无效。不传表示无过渡 |
+| `coor` | `double[]?` | null | User coordinate frame (6 elements). `null` = omitted from command / 用户坐标系（6 个元素）。`null` 时指令中不包含该字段 |
+| `tool` | `double[]?` | null | Tool coordinate frame (6 elements). `null` = omitted from command / 工具坐标系（6 个元素）。`null` 时指令中不包含该字段 |
+| `relativeBlend` | `double?` | null | Relative blend ratio (0–1). Mutually exclusive with `blend` — if both set, this is ignored / 相对平滑比（0–1）。与 `blend` 互斥——同时传入时此参数无效 |
 
 ```csharp
 // Cartesian linear move / 笛卡尔直线运动
@@ -287,14 +297,20 @@ await robot.MovL(JointPoint.Degrees(new[] { 10, 20, 90, 0, 90, 0 }), speed: 100,
 
 ```csharp
 public Task<CommonResponse> MovC(CartesianPoint middle, CartesianPoint target,
-    double speed, double acc, double blend = 25,
+    double speed, double acc, double? blend = null,
     double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 ```
 
-| Parameter | Type | Description / 说明 |
-|-----------|------|-------------------|
-| `middle` | `CartesianPoint` | Intermediate point (on arc) / 中间点（圆弧上） |
-| `target` | `CartesianPoint` | End point / 终点 |
+| Parameter | Type | Default | Description / 说明 |
+|-----------|------|---------|-------------------|
+| `middle` | `CartesianPoint` | — | Intermediate point (on arc) / 中间点（圆弧上） |
+| `target` | `CartesianPoint` | — | End point / 终点 |
+| `speed` | `double` | — | Speed (mm/s) / 速度（mm/s） |
+| `acc` | `double` | — | Acceleration / 加速度 |
+| `blend` | `double?` | null | Blend radius (mm). Mutually exclusive with `relativeBlend` — if both set, `relativeBlend` is ignored. Omit for no transition / 平滑半径（mm）。与 `relativeBlend` 互斥——同时传入时 `relativeBlend` 无效。不传表示无过渡 |
+| `coor` | `double[]?` | null | User coordinate frame. `null` = omitted from command / 用户坐标系。`null` 时指令中不包含该字段 |
+| `tool` | `double[]?` | null | Tool coordinate frame. `null` = omitted from command / 工具坐标系。`null` 时指令中不包含该字段 |
+| `relativeBlend` | `double?` | null | Relative blend ratio (0–1). Mutually exclusive with `blend` — if both set, this is ignored / 相对平滑比（0–1）。与 `blend` 互斥——同时传入时此参数无效 |
 
 ```csharp
 await robot.MovC(
@@ -309,15 +325,21 @@ await robot.MovC(
 
 ```csharp
 public Task<CommonResponse> MovCircle(CartesianPoint middle, CartesianPoint target,
-    int circleNum, double speed, double acc, double blend = 25,
+    int circleNum, double speed, double acc, double? blend = null,
     double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 ```
 
-| Parameter | Type | Description / 说明 |
-|-----------|------|-------------------|
-| `middle` | `CartesianPoint` | Intermediate point / 中间点 |
-| `target` | `CartesianPoint` | End point / 终点 |
-| `circleNum` | `int` | Number of full circles / 整圆圈数 |
+| Parameter | Type | Default | Description / 说明 |
+|-----------|------|---------|-------------------|
+| `middle` | `CartesianPoint` | — | Intermediate point / 中间点 |
+| `target` | `CartesianPoint` | — | End point / 终点 |
+| `circleNum` | `int` | — | Number of full circles / 整圆圈数 |
+| `speed` | `double` | — | Speed (mm/s) / 速度（mm/s） |
+| `acc` | `double` | — | Acceleration / 加速度 |
+| `blend` | `double?` | null | Blend radius (mm). Mutually exclusive with `relativeBlend` — if both set, `relativeBlend` is ignored. Omit for no transition / 平滑半径（mm）。与 `relativeBlend` 互斥——同时传入时 `relativeBlend` 无效。不传表示无过渡 |
+| `coor` | `double[]?` | null | User coordinate frame. `null` = omitted from command / 用户坐标系。`null` 时指令中不包含该字段 |
+| `tool` | `double[]?` | null | Tool coordinate frame. `null` = omitted from command / 工具坐标系。`null` 时指令中不包含该字段 |
+| `relativeBlend` | `double?` | null | Relative blend ratio (0–1). Mutually exclusive with `blend` — if both set, this is ignored / 相对平滑比（0–1）。与 `blend` 互斥——同时传入时此参数无效 |
 
 ```csharp
 await robot.MovCircle(
@@ -336,6 +358,10 @@ public async Task<CommonResponse> Move(IReadOnlyList<MoveInstruction> instructio
 
 **EN:** Sends a list of motion instructions as a single path command.
 **ZH:** 将一组运动指令作为单条路径命令发送。
+
+| Parameter | Type | Description / 说明 |
+|-----------|------|-------------------|
+| `instructions` | `IReadOnlyList<MoveInstruction>` | List of move instructions to execute as a path / 作为路径执行的运动指令列表 |
 
 ```csharp
 await robot.Move(new[]
@@ -362,13 +388,24 @@ await robot.Move(new[]
 
 ```csharp
 public bool MovJSync(JointPoint target, double speed, double acc,
-    MotionWaitOptions? wait = null, double blend = 25,
+    MotionWaitOptions? wait = null, double? blend = null,
     double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 
 public bool MovJSync(CartesianPoint target, double speed, double acc,
-    MotionWaitOptions? wait = null, double blend = 25,
+    MotionWaitOptions? wait = null, double? blend = null,
     double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 ```
+
+| Parameter | Type | Default | Description / 说明 |
+|-----------|------|---------|-------------------|
+| `target` | `JointPoint` / `CartesianPoint` | — | Target position / 目标位置 |
+| `speed` | `double` | — | Speed (deg/s for joint) / 速度（关节 deg/s） |
+| `acc` | `double` | — | Acceleration / 加速度 |
+| `wait` | `MotionWaitOptions?` | null | Wait options (timeout, tolerance, etc.) / 等待选项（超时、容差等） |
+| `blend` | `double?` | null | Blend radius (mm). Mutually exclusive with `relativeBlend` — if both set, `relativeBlend` is ignored. Omit for no transition / 平滑半径（mm）。与 `relativeBlend` 互斥——同时传入时 `relativeBlend` 无效。不传表示无过渡 |
+| `coor` | `double[]?` | null | User coordinate frame. `null` = omitted from command / 用户坐标系。`null` 时指令中不包含该字段 |
+| `tool` | `double[]?` | null | Tool coordinate frame. `null` = omitted from command / 工具坐标系。`null` 时指令中不包含该字段 |
+| `relativeBlend` | `double?` | null | Relative blend ratio (0–1). Mutually exclusive with `blend` — if both set, this is ignored / 相对平滑比（0–1）。与 `blend` 互斥——同时传入时此参数无效 |
 
 ```csharp
 var wait = new MotionWaitOptions
@@ -386,13 +423,24 @@ robot.MovJSync(JointPoint.Degrees(new[] { 0, 0, 90, 0, 90, 0 }), 40, 100, wait);
 
 ```csharp
 public bool MovLSync(CartesianPoint target, double speed, double acc,
-    MotionWaitOptions? wait = null, double blend = 25,
+    MotionWaitOptions? wait = null, double? blend = null,
     double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 
 public bool MovLSync(JointPoint target, double speed, double acc,
-    MotionWaitOptions? wait = null, double blend = 25,
+    MotionWaitOptions? wait = null, double? blend = null,
     double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 ```
+
+| Parameter | Type | Default | Description / 说明 |
+|-----------|------|---------|-------------------|
+| `target` | `CartesianPoint` / `JointPoint` | — | Target position / 目标位置 |
+| `speed` | `double` | — | Speed (mm/s for linear) / 速度（直线 mm/s） |
+| `acc` | `double` | — | Acceleration / 加速度 |
+| `wait` | `MotionWaitOptions?` | null | Wait options (timeout, tolerance, etc.) / 等待选项（超时、容差等） |
+| `blend` | `double?` | null | Blend radius (mm). Mutually exclusive with `relativeBlend` — if both set, `relativeBlend` is ignored. Omit for no transition / 平滑半径（mm）。与 `relativeBlend` 互斥——同时传入时 `relativeBlend` 无效。不传表示无过渡 |
+| `coor` | `double[]?` | null | User coordinate frame. `null` = omitted from command / 用户坐标系。`null` 时指令中不包含该字段 |
+| `tool` | `double[]?` | null | Tool coordinate frame. `null` = omitted from command / 工具坐标系。`null` 时指令中不包含该字段 |
+| `relativeBlend` | `double?` | null | Relative blend ratio (0–1). Mutually exclusive with `blend` — if both set, this is ignored / 相对平滑比（0–1）。与 `blend` 互斥——同时传入时此参数无效 |
 
 ```csharp
 robot.MovLSync(
@@ -413,8 +461,20 @@ robot.MovLSync(
 ```csharp
 public bool MovCSync(CartesianPoint middle, CartesianPoint target,
     double speed, double acc, MotionWaitOptions? wait = null,
-    double blend = 25, double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
+    double? blend = null, double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 ```
+
+| Parameter | Type | Default | Description / 说明 |
+|-----------|------|---------|-------------------|
+| `middle` | `CartesianPoint` | — | Intermediate point (on arc) / 中间点（圆弧上） |
+| `target` | `CartesianPoint` | — | End point / 终点 |
+| `speed` | `double` | — | Speed (mm/s) / 速度（mm/s） |
+| `acc` | `double` | — | Acceleration / 加速度 |
+| `wait` | `MotionWaitOptions?` | null | Wait options / 等待选项 |
+| `blend` | `double?` | null | Blend radius (mm). Mutually exclusive with `relativeBlend` — if both set, `relativeBlend` is ignored. Omit for no transition / 平滑半径（mm）。与 `relativeBlend` 互斥——同时传入时 `relativeBlend` 无效。不传表示无过渡 |
+| `coor` | `double[]?` | null | User coordinate frame. `null` = omitted from command / 用户坐标系。`null` 时指令中不包含该字段 |
+| `tool` | `double[]?` | null | Tool coordinate frame. `null` = omitted from command / 工具坐标系。`null` 时指令中不包含该字段 |
+| `relativeBlend` | `double?` | null | Relative blend ratio (0–1). Mutually exclusive with `blend` — if both set, this is ignored / 相对平滑比（0–1）。与 `blend` 互斥——同时传入时此参数无效 |
 
 ```csharp
 robot.MovCSync(
@@ -429,8 +489,21 @@ robot.MovCSync(
 ```csharp
 public bool MovCircleSync(CartesianPoint middle, CartesianPoint target,
     int circleNum, double speed, double acc, MotionWaitOptions? wait = null,
-    double blend = 25, double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
+    double? blend = null, double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 ```
+
+| Parameter | Type | Default | Description / 说明 |
+|-----------|------|---------|-------------------|
+| `middle` | `CartesianPoint` | — | Intermediate point / 中间点 |
+| `target` | `CartesianPoint` | — | End point / 终点 |
+| `circleNum` | `int` | — | Number of full circles / 整圆圈数 |
+| `speed` | `double` | — | Speed (mm/s) / 速度（mm/s） |
+| `acc` | `double` | — | Acceleration / 加速度 |
+| `wait` | `MotionWaitOptions?` | null | Wait options / 等待选项 |
+| `blend` | `double?` | null | Blend radius (mm). Mutually exclusive with `relativeBlend` — if both set, `relativeBlend` is ignored. Omit for no transition / 平滑半径（mm）。与 `relativeBlend` 互斥——同时传入时 `relativeBlend` 无效。不传表示无过渡 |
+| `coor` | `double[]?` | null | User coordinate frame. `null` = omitted from command / 用户坐标系。`null` 时指令中不包含该字段 |
+| `tool` | `double[]?` | null | Tool coordinate frame. `null` = omitted from command / 工具坐标系。`null` 时指令中不包含该字段 |
+| `relativeBlend` | `double?` | null | Relative blend ratio (0–1). Mutually exclusive with `blend` — if both set, this is ignored / 相对平滑比（0–1）。与 `blend` 互斥——同时传入时此参数无效 |
 
 ---
 
@@ -442,6 +515,11 @@ public bool MoveSync(IReadOnlyList<MoveInstruction> instructions, MotionWaitOpti
 
 **EN:** Sends multi-segment path and blocks until the last segment target is reached.
 **ZH:** 发送多段路径并阻塞直到最后一段目标到达。
+
+| Parameter | Type | Default | Description / 说明 |
+|-----------|------|---------|-------------------|
+| `instructions` | `IReadOnlyList<MoveInstruction>` | — | List of move instructions / 运动指令列表 |
+| `wait` | `MotionWaitOptions?` | null | Wait options (timeout, tolerance, etc.) / 等待选项（超时、容差等） |
 
 ```csharp
 robot.MoveSync(new[]
@@ -910,6 +988,11 @@ public async Task<CommonResponse> StartCriDataPush(string udpIp, int udpPort)
 **EN:** Starts local UDP listener and requests controller to push CRI real-time data. Fixed params: 100ms period, high-precision, mask 0xFFFF, 308-byte UDP packet.
 **ZH:** 启动本地 UDP 监听并请求控制器推送 CRI 实时数据。固定参数：100ms 周期、高精度、mask 0xFFFF、308 字节 UDP 包。
 
+| Parameter | Type | Description / 说明 |
+|-----------|------|-------------------|
+| `udpIp` | `string` | Local IP address for UDP reception / 本地 UDP 接收 IP 地址 |
+| `udpPort` | `int` | Local UDP port for receiving CRI data / 本地 UDP 端口，用于接收 CRI 数据 |
+
 | Method | Protocol |
 |--------|----------|
 | `StartCriDataPush(udpIp, udpPort)` | `CRI/StartDataPush` |
@@ -933,6 +1016,11 @@ public async Task<CommonResponse> StopCriDataPush(string? udpIp = null, int? udp
 
 **EN:** Requests controller to stop CRI data push and closes local UDP listener.
 **ZH:** 请求控制器停止 CRI 数据推送并关闭本地 UDP 监听。
+
+| Parameter | Type | Default | Description / 说明 |
+|-----------|------|---------|-------------------|
+| `udpIp` | `string?` | null | UDP IP used when starting (for protocol stop message) / 启动时使用的 UDP IP（用于协议停止消息） |
+| `udpPort` | `int?` | null | UDP port used when starting / 启动时使用的 UDP 端口 |
 
 | Method | Protocol |
 |--------|----------|
@@ -1017,6 +1105,14 @@ public async Task<CommonResponse> RunScript(
 **EN:** Sends a script for immediate execution.
 **ZH:** 发送脚本立即执行。
 
+| Parameter | Type | Default | Description / 说明 |
+|-----------|------|---------|-------------------|
+| `mainScript` | `string` | — | Main script content to execute / 要执行的主脚本内容 |
+| `subThreads` | `IReadOnlyDictionary<string, string>?` | null | Sub-thread scripts (name → code) / 子线程脚本（名称 → 代码） |
+| `subPrograms` | `IReadOnlyDictionary<string, string>?` | null | Sub-program scripts (name → code) / 子程序脚本（名称 → 代码） |
+| `interrupts` | `IReadOnlyDictionary<string, string>?` | null | Interrupt handler scripts (name → code) / 中断处理脚本（名称 → 代码） |
+| `vars` | `IReadOnlyDictionary<string, object>?` | null | Variables to inject / 要注入的变量 |
+
 ```csharp
 await robot.RunScript(mainScript: "movej(j1, v50) sub1() end");
 ```
@@ -1070,6 +1166,12 @@ public async Task<PublishTopicSubscription> SubscribePublishTopic(
 **EN:** Subscribes to a TCP topic push. Returns a disposable subscription handle.
 **ZH:** 订阅 TCP 主题推送。返回可释放的订阅句柄。
 
+| Parameter | Type | Default | Description / 说明 |
+|-----------|------|---------|-------------------|
+| `topicTy` | `string` | — | Topic name, e.g. `PublishTopics.RobotStatus` / 主题名，如 `PublishTopics.RobotStatus` |
+| `handler` | `Action<PublishNotification>` | — | Callback for notifications / 通知回调 |
+| `tcMilliseconds` | `int` | 100 | Protocol `tc` field in ms / 协议 `tc` 字段（毫秒） |
+
 ```csharp
 using var sub = await robot.SubscribePublishTopic(
     PublishTopics.RobotStatus,
@@ -1112,6 +1214,20 @@ public Task<CommonResponse> SaveGlobalVar(string name, object value, string? rem
 public async Task<CommonResponse> SaveGlobalVars(IReadOnlyCollection<GlobalVarSaveItem> items)
 ```
 
+**SaveGlobalVar parameters / SaveGlobalVar 参数：**
+
+| Parameter | Type | Default | Description / 说明 |
+|-----------|------|---------|-------------------|
+| `name` | `string` | — | Variable name (validated by `GlobalVarNaming`) / 变量名（由 `GlobalVarNaming` 校验） |
+| `value` | `object` | — | Value (JSON-serializable or `GlobalVarRawJson`) / 值（可 JSON 序列化或 `GlobalVarRawJson`） |
+| `remark` | `string?` | null | Optional remark / 可选备注 |
+
+**SaveGlobalVars parameters / SaveGlobalVars 参数：**
+
+| Parameter | Type | Description / 说明 |
+|-----------|------|-------------------|
+| `items` | `IReadOnlyCollection<GlobalVarSaveItem>` | Collection of variables to save / 要保存的变量集合 |
+
 ```csharp
 // Single / 单个
 await robot.SaveGlobalVar("counter", 42, "test counter");
@@ -1135,6 +1251,10 @@ public async Task<CommonResponse> RemoveGlobalVars(IEnumerable<string> names)
 **EN:** Deletes specified global variables. Deleting nonexistent variables is not an error.
 **ZH:** 删除指定全局变量。删除不存在的变量不会报错。
 
+| Parameter | Type | Description / 说明 |
+|-----------|------|-------------------|
+| `names` | `IEnumerable<string>` | Variable names to delete / 要删除的变量名集合 |
+
 ```csharp
 await robot.RemoveGlobalVars(new[] { "counter", "x", "y" });
 ```
@@ -1152,6 +1272,13 @@ public async Task<double[]> AposToCposPose(double[] jointDegrees, double[] userF
 
 **EN:** Forward kinematics: joint space → Cartesian space. `AposToCposPose` returns [x,y,z,rx,ry,rz] in mm+deg.
 **ZH:** 正运动学：关节空间 → 笛卡尔空间。`AposToCposPose` 返回 [x,y,z,rx,ry,rz]，单位 mm+deg。
+
+| Parameter | Type | Default | Description / 说明 |
+|-----------|------|---------|-------------------|
+| `jointDegrees` | `double[]` | — | 6 joint angles in degrees / 6 个关节角度（度） |
+| `userFrame` | `double[]` | — | User coordinate frame [x,y,z,rx,ry,rz] (mm+deg) / 用户坐标系 [x,y,z,rx,ry,rz]（mm+deg） |
+| `toolFrame` | `double[]` | — | Tool coordinate frame [x,y,z,rx,ry,rz] (mm+deg) / 工具坐标系 [x,y,z,rx,ry,rz]（mm+deg） |
+| `externalAxisPositions` | `double[]?` | null | External axis positions / 外部轴位置 |
 
 ```csharp
 double[] joints = { 0, 0, 90, 0, 90, 0 };
@@ -1174,6 +1301,12 @@ public async Task<double[]> CposToAposJoints(double[] cartesianMmDeg, double[] r
 
 **EN:** Inverse kinematics: Cartesian → joint space. `CposToAposJoints` returns 6 joint angles in degrees.
 **ZH:** 逆运动学：笛卡尔 → 关节空间。`CposToAposJoints` 返回 6 个关节角度（度）。
+
+| Parameter | Type | Default | Description / 说明 |
+|-----------|------|---------|-------------------|
+| `cartesianMmDeg` | `double[]` | — | TCP pose [x,y,z,rx,ry,rz] in mm+deg / TCP 位姿 [x,y,z,rx,ry,rz]，单位 mm+deg |
+| `referenceJointDegrees` | `double[]` | — | Reference joints for IK solver (6 angles in deg) / IK 求解器的参考关节（6 个角度，度） |
+| `externalAxisPositions` | `double[]?` | null | External axis positions / 外部轴位置 |
 
 ```csharp
 double[] pose = { 400, 0, 300, 180, 0, 0 };

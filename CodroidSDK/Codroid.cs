@@ -1254,7 +1254,7 @@ namespace Codroid
             JointPoint target,
             double speed,
             double acc,
-            double blend = 25,
+            double? blend = null,
             double[]? coor = null,
             double[]? tool = null,
             double? relativeBlend = null) =>
@@ -1270,7 +1270,7 @@ namespace Codroid
             CartesianPoint target,
             double speed,
             double acc,
-            double blend = 25,
+            double? blend = null,
             double[]? coor = null,
             double[]? tool = null,
             double? relativeBlend = null) =>
@@ -1286,7 +1286,7 @@ namespace Codroid
             CartesianPoint target,
             double speed,
             double acc,
-            double blend = 25,
+            double? blend = null,
             double[]? coor = null,
             double[]? tool = null,
             double? relativeBlend = null) =>
@@ -1302,7 +1302,7 @@ namespace Codroid
             JointPoint target,
             double speed,
             double acc,
-            double blend = 25,
+            double? blend = null,
             double[]? coor = null,
             double[]? tool = null,
             double? relativeBlend = null) =>
@@ -1319,7 +1319,7 @@ namespace Codroid
             CartesianPoint target,
             double speed,
             double acc,
-            double blend = 25,
+            double? blend = null,
             double[]? coor = null,
             double[]? tool = null,
             double? relativeBlend = null) =>
@@ -1337,7 +1337,7 @@ namespace Codroid
             int circleNum,
             double speed,
             double acc,
-            double blend = 25,
+            double? blend = null,
             double[]? coor = null,
             double[]? tool = null,
             double? relativeBlend = null) =>
@@ -1386,7 +1386,7 @@ namespace Codroid
             double speed,
             double acc,
             MotionWaitOptions? wait = null,
-            double blend = 25,
+            double? blend = null,
             double[]? coor = null,
             double[]? tool = null,
             double? relativeBlend = null)
@@ -1410,7 +1410,7 @@ namespace Codroid
             double speed,
             double acc,
             MotionWaitOptions? wait = null,
-            double blend = 25,
+            double? blend = null,
             double[]? coor = null,
             double[]? tool = null,
             double? relativeBlend = null)
@@ -1434,7 +1434,7 @@ namespace Codroid
             double speed,
             double acc,
             MotionWaitOptions? wait = null,
-            double blend = 25,
+            double? blend = null,
             double[]? coor = null,
             double[]? tool = null,
             double? relativeBlend = null)
@@ -1458,7 +1458,7 @@ namespace Codroid
             double speed,
             double acc,
             MotionWaitOptions? wait = null,
-            double blend = 25,
+            double? blend = null,
             double[]? coor = null,
             double[]? tool = null,
             double? relativeBlend = null)
@@ -1483,7 +1483,7 @@ namespace Codroid
             double speed,
             double acc,
             MotionWaitOptions? wait = null,
-            double blend = 25,
+            double? blend = null,
             double[]? coor = null,
             double[]? tool = null,
             double? relativeBlend = null)
@@ -1513,7 +1513,7 @@ namespace Codroid
             double speed,
             double acc,
             MotionWaitOptions? wait = null,
-            double blend = 25,
+            double? blend = null,
             double[]? coor = null,
             double[]? tool = null,
             double? relativeBlend = null)

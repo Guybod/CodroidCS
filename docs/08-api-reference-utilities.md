@@ -340,6 +340,13 @@ Task<double[]> AposToCposPose(
     double[]? externalAxisPositions = null)
 ```
 
+| Parameter | Type | Default | Description / 说明 |
+|-----------|------|---------|-------------------|
+| `jointDegrees` | `double[]` | — | 6 joint angles in degrees / 6 个关节角度（度） |
+| `userFrame` | `double[]` | — | User coordinate frame [x,y,z,rx,ry,rz] (mm+deg) / 用户坐标系 |
+| `toolFrame` | `double[]` | — | Tool coordinate frame [x,y,z,rx,ry,rz] (mm+deg) / 工具坐标系 |
+| `externalAxisPositions` | `double[]?` | null | External axis positions / 外部轴位置 |
+
 All vectors must be exactly 6 elements. Units: degrees for joints, mm + deg for frames.
 
 所有向量必须恰好 6 个元素。单位：关节为度，坐标系为 mm + deg。
@@ -375,6 +382,12 @@ Task<double[]> CposToAposJoints(
     double[] referenceJointDegrees,
     double[]? externalAxisPositions = null)
 ```
+
+| Parameter | Type | Default | Description / 说明 |
+|-----------|------|---------|-------------------|
+| `cartesianMmDeg` | `double[]` | — | TCP pose [x,y,z,rx,ry,rz] in mm+deg / TCP 位姿 [x,y,z,rx,ry,rz]，单位 mm+deg |
+| `referenceJointDegrees` | `double[]` | — | Reference joints for IK solver (6 angles in deg) / IK 求解器的参考关节（6 个角度，度） |
+| `externalAxisPositions` | `double[]?` | null | External axis positions / 外部轴位置 |
 
 `referenceJointDegrees` is used as the starting guess. If the controller returns an empty array, an `InvalidOperationException` is thrown. Adjust the reference joints and retry.
 
@@ -417,6 +430,14 @@ Task<double[]> CalculateRelativePoseResult(
     double[]? tcpPoseInPosCoorFrame = null,
     double[]? userCoorFrame = null)
 ```
+
+| Parameter | Type | Default | Description / 说明 |
+|-----------|------|---------|-------------------|
+| `tcpPoseWorld` | `double[]` | — | Current TCP pose in world frame [x,y,z,rx,ry,rz] / 世界坐标系中的当前 TCP 位姿 |
+| `offset` | `double[]` | — | [dx,dy,dz,drx,dry,drz] offset / 偏移量 [dx,dy,dz,drx,dry,drz] |
+| `coorType` | `RelativePoseCoorType` | — | User or Tool coordinate frame / 用户或工具坐标系 |
+| `tcpPoseInPosCoorFrame` | `double[]?` | null | TCP pose in position coordinate frame / 位置坐标系中的 TCP 位姿 |
+| `userCoorFrame` | `double[]?` | null | User coordinate frame definition / 用户坐标系定义 |
 
 #### RelativePoseCoorType
 

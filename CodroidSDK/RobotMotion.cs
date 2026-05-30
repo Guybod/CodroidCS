@@ -197,7 +197,9 @@ namespace Codroid
 
         public double Speed { get; init; }
         public double Acc { get; init; }
-        public double Blend { get; init; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public double? Blend { get; init; }
 
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public double? RelativeBlend { get; init; }
@@ -218,7 +220,7 @@ namespace Codroid
             JointPoint target,
             double speed,
             double acc,
-            double blend = 25,
+            double? blend = null,
             double[]? coor = null,
             double[]? tool = null,
             double? relativeBlend = null) =>
@@ -229,7 +231,7 @@ namespace Codroid
             CartesianPoint target,
             double speed,
             double acc,
-            double blend = 25,
+            double? blend = null,
             double[]? coor = null,
             double[]? tool = null,
             double? relativeBlend = null) =>
@@ -240,7 +242,7 @@ namespace Codroid
             CartesianPoint target,
             double speed,
             double acc,
-            double blend = 25,
+            double? blend = null,
             double[]? coor = null,
             double[]? tool = null,
             double? relativeBlend = null) =>
@@ -251,7 +253,7 @@ namespace Codroid
             JointPoint target,
             double speed,
             double acc,
-            double blend = 25,
+            double? blend = null,
             double[]? coor = null,
             double[]? tool = null,
             double? relativeBlend = null) =>
@@ -263,7 +265,7 @@ namespace Codroid
             CartesianPoint target,
             double speed,
             double acc,
-            double blend = 25,
+            double? blend = null,
             double[]? coor = null,
             double[]? tool = null,
             double? relativeBlend = null) =>
@@ -286,7 +288,7 @@ namespace Codroid
             int circleNum,
             double speed,
             double acc,
-            double blend = 25,
+            double? blend = null,
             double[]? coor = null,
             double[]? tool = null,
             double? relativeBlend = null) =>
@@ -307,7 +309,7 @@ namespace Codroid
             MovePoint targetPoint,
             double speed,
             double acc,
-            double blend,
+            double? blend,
             double[]? coor,
             double[]? tool,
             double? relativeBlend) =>
@@ -329,7 +331,7 @@ namespace Codroid
             MovePoint targetPoint,
             double speed,
             double acc,
-            double blend,
+            double? blend,
             int? circleNum,
             double[]? coor,
             double[]? tool,

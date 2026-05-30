@@ -588,10 +588,10 @@ All motion methods send the command and return immediately. Use `*Sync` variants
 
 ```csharp
 public Task<CommonResponse> MovJ(JointPoint target, double speed, double acc,
-    double blend = 25, double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
+    double? blend = null, double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 
 public Task<CommonResponse> MovJ(CartesianPoint target, double speed, double acc,
-    double blend = 25, double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
+    double? blend = null, double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 ```
 
 | Parameter | Type | Default | Description |
@@ -599,10 +599,10 @@ public Task<CommonResponse> MovJ(CartesianPoint target, double speed, double acc
 | `target` | `JointPoint` / `CartesianPoint` | -- | Target position |
 | `speed` | `double` | -- | Speed |
 | `acc` | `double` | -- | Acceleration |
-| `blend` | `double` | 25 | Blend radius |
-| `coor` | `double[]?` | null | User coordinate frame |
-| `tool` | `double[]?` | null | Tool coordinate frame |
-| `relativeBlend` | `double?` | null | Relative blend |
+| `blend` | `double?` | null | Blend radius. Mutually exclusive with `relativeBlend` — if both set, `relativeBlend` is ignored. Omit for no transition |
+| `coor` | `double[]?` | null | User coordinate frame. `null` = omitted from command |
+| `tool` | `double[]?` | null | Tool coordinate frame. `null` = omitted from command |
+| `relativeBlend` | `double?` | null | Relative blend ratio (0–1). Mutually exclusive with `blend` — if both set, this is ignored |
 
 ```csharp
 // Joint target
@@ -618,10 +618,10 @@ await robot.MovJ(CartesianPoint.MmDeg(new[] { 400, 0, 300, 180, 0, 0 }), speed: 
 
 ```csharp
 public Task<CommonResponse> MovL(CartesianPoint target, double speed, double acc,
-    double blend = 25, double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
+    double? blend = null, double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 
 public Task<CommonResponse> MovL(JointPoint target, double speed, double acc,
-    double blend = 25, double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
+    double? blend = null, double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 ```
 
 ```csharp
@@ -639,7 +639,7 @@ await robot.MovL(JointPoint.Degrees(new[] { 10, 20, 90, 0, 90, 0 }), speed: 100,
 
 ```csharp
 public Task<CommonResponse> MovC(CartesianPoint middle, CartesianPoint target,
-    double speed, double acc, double blend = 25,
+    double speed, double acc, double? blend = null,
     double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 ```
 
@@ -661,7 +661,7 @@ await robot.MovC(
 
 ```csharp
 public Task<CommonResponse> MovCircle(CartesianPoint middle, CartesianPoint target,
-    int circleNum, double speed, double acc, double blend = 25,
+    int circleNum, double speed, double acc, double? blend = null,
     double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 ```
 
@@ -709,11 +709,11 @@ await robot.Move(new[]
 
 ```csharp
 public bool MovJSync(JointPoint target, double speed, double acc,
-    MotionWaitOptions? wait = null, double blend = 25,
+    MotionWaitOptions? wait = null, double? blend = null,
     double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 
 public bool MovJSync(CartesianPoint target, double speed, double acc,
-    MotionWaitOptions? wait = null, double blend = 25,
+    MotionWaitOptions? wait = null, double? blend = null,
     double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 ```
 
@@ -733,11 +733,11 @@ robot.MovJSync(JointPoint.Degrees(new[] { 0, 0, 90, 0, 90, 0 }), 40, 100, wait);
 
 ```csharp
 public bool MovLSync(CartesianPoint target, double speed, double acc,
-    MotionWaitOptions? wait = null, double blend = 25,
+    MotionWaitOptions? wait = null, double? blend = null,
     double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 
 public bool MovLSync(JointPoint target, double speed, double acc,
-    MotionWaitOptions? wait = null, double blend = 25,
+    MotionWaitOptions? wait = null, double? blend = null,
     double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 ```
 
@@ -760,7 +760,7 @@ robot.MovLSync(
 ```csharp
 public bool MovCSync(CartesianPoint middle, CartesianPoint target,
     double speed, double acc, MotionWaitOptions? wait = null,
-    double blend = 25, double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
+    double? blend = null, double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 ```
 
 ```csharp
@@ -776,7 +776,7 @@ robot.MovCSync(
 ```csharp
 public bool MovCircleSync(CartesianPoint middle, CartesianPoint target,
     int circleNum, double speed, double acc, MotionWaitOptions? wait = null,
-    double blend = 25, double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
+    double? blend = null, double[]? coor = null, double[]? tool = null, double? relativeBlend = null)
 ```
 
 ---
@@ -1675,8 +1675,8 @@ var movePointFromCart = MovePoint.FromCartesian(cp);
 | `CircleNum` | `int?` | `null` | Number of full circles (only for `movCircle`) |
 | `Speed` | `double` | -- | Speed value (mm/s for linear, deg/s for joint) |
 | `Acc` | `double` | -- | Acceleration value |
-| `Blend` | `double` | -- | Blend radius (mm for linear, deg for joint) |
-| `RelativeBlend` | `double?` | `null` | Relative blend ratio (0-1), overrides `Blend` when set |
+| `Blend` | `double?` | `null` | Blend radius (mm for linear, deg for joint). Mutually exclusive with `RelativeBlend`. Omit for no transition |
+| `RelativeBlend` | `double?` | `null` | Relative blend ratio (0-1). Mutually exclusive with `Blend` — if both set, this is ignored |
 | `TargetPoint` | `MovePoint` | -- | The target point for this segment |
 | `MiddlePoint` | `MovePoint?` | `null` | Middle/via point (required for `movC` and `movCircle`) |
 | `Coor` | `double[]?` | `null` | Coordinate system definition |
@@ -1701,10 +1701,10 @@ All factories share common optional parameters: `coor` (coordinate system), `too
 |-----------|------|---------|-------------|
 | `speed` | `double` | -- | Required. Speed (mm/s or deg/s) |
 | `acc` | `double` | -- | Required. Acceleration |
-| `blend` | `double` | `25` | Blend radius |
-| `coor` | `double[]?` | `null` | Coordinate system |
-| `tool` | `double[]?` | `null` | Tool offset |
-| `relativeBlend` | `double?` | `null` | Relative blend (0-1) |
+| `blend` | `double?` | `null` | Blend radius. Mutually exclusive with `relativeBlend` — if both set, `relativeBlend` is ignored. Omit for no transition |
+| `coor` | `double[]?` | `null` | User coordinate frame. `null` = omitted from command |
+| `tool` | `double[]?` | `null` | Tool coordinate frame. `null` = omitted from command |
+| `relativeBlend` | `double?` | `null` | Relative blend (0-1). Mutually exclusive with `blend` — if both set, this is ignored |
 
 ### Examples
 

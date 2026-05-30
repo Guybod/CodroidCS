@@ -169,8 +169,8 @@ var movePointFromCart = MovePoint.FromCartesian(cp);
 | `CircleNum` | `int?` | `null` | Number of full circles (only for `movCircle`) / 整圆圈数（仅用于 `movCircle`） |
 | `Speed` | `double` | — | Speed value (mm/s for linear, deg/s for joint) / 速度值（直线 mm/s，关节 deg/s） |
 | `Acc` | `double` | — | Acceleration value / 加速度值 |
-| `Blend` | `double` | — | Blend radius (mm for linear, deg for joint) / 混合半径（直线 mm，关节 deg） |
-| `RelativeBlend` | `double?` | `null` | Relative blend ratio (0–1), overrides `Blend` when set / 相对混合比（0–1），设置时覆盖 `Blend` |
+| `Blend` | `double?` | `null` | Blend radius (mm for linear, deg for joint). Mutually exclusive with `RelativeBlend`. Omit for no transition / 混合半径（直线 mm，关节 deg）。与 `RelativeBlend` 互斥。不传表示无过渡 |
+| `RelativeBlend` | `double?` | `null` | Relative blend ratio (0–1). Mutually exclusive with `Blend` — if both set, this is ignored / 相对混合比（0–1）。与 `Blend` 互斥——同时设置时此属性无效 |
 | `TargetPoint` | `MovePoint` | — | The target point for this segment / 本段的目标点 |
 | `MiddlePoint` | `MovePoint?` | `null` | Middle/via point (required for `movC` and `movCircle`) / 中间/经过点（`movC` 和 `movCircle` 必需） |
 | `Coor` | `double[]?` | `null` | Coordinate system definition / 坐标系定义 |
@@ -197,10 +197,10 @@ All factories share common optional parameters: `coor` (coordinate system), `too
 |-----------|------|---------|---------------------|
 | `speed` | `double` | — | Required. Speed (mm/s or deg/s) / 必需。速度（mm/s 或 deg/s） |
 | `acc` | `double` | — | Required. Acceleration / 必需。加速度 |
-| `blend` | `double` | `25` | Blend radius / 混合半径 |
-| `coor` | `double[]?` | `null` | Coordinate system / 坐标系 |
-| `tool` | `double[]?` | `null` | Tool offset / 工具偏移 |
-| `relativeBlend` | `double?` | `null` | Relative blend (0–1) / 相对混合比（0–1） |
+| `blend` | `double?` | `null` | Blend radius. Mutually exclusive with `relativeBlend` — if both set, `relativeBlend` is ignored. Omit for no transition / 平滑半径。与 `relativeBlend` 互斥——同时传入时 `relativeBlend` 无效。不传表示无过渡 |
+| `coor` | `double[]?` | `null` | User coordinate frame. `null` = omitted from command / 用户坐标系。`null` 时指令中不包含该字段 |
+| `tool` | `double[]?` | `null` | Tool coordinate frame. `null` = omitted from command / 工具坐标系。`null` 时指令中不包含该字段 |
+| `relativeBlend` | `double?` | `null` | Relative blend (0–1). Mutually exclusive with `blend` — if both set, this is ignored / 相对混合比（0–1）。与 `blend` 互斥——同时传入时此参数无效 |
 
 ### Examples / 示例
 
@@ -457,13 +457,30 @@ The `*Sync` methods send motion commands and then automatically poll CRI data un
 | Method | Parameters | Description / 描述 |
 |--------|------------|---------------------|
 | `MoveSync` | `instructions, wait?` | Blocking path execution / 阻塞式路径执行 |
-| `MovJSync(JointPoint)` | `target, speed, acc, wait?` | Blocking joint move to joint target / 阻塞式关节运动到关节目标 |
-| `MovJSync(CartesianPoint)` | `target, speed, acc, wait?` | Blocking joint move to Cartesian target / 阻塞式关节运动到笛卡尔目标 |
-| `MovLSync(CartesianPoint)` | `target, speed, acc, wait?` | Blocking linear move to Cartesian target / 阻塞式直线运动到笛卡尔目标 |
-| `MovLSync(JointPoint)` | `target, speed, acc, wait?` | Blocking linear move to joint target / 阻塞式直线运动到关节目标 |
-| `MovCSync` | `middle, target, speed, acc, wait?` | Blocking circular arc move / 阻塞式圆弧运动 |
-| `MovCircleSync` | `middle, target, circleNum, speed, acc, wait?` | Blocking full circle move / 阻塞式整圆运动 |
+| `MovJSync(JointPoint)` | `target, speed, acc, wait?, blend?, coor?, tool?, relativeBlend?` | Blocking joint move to joint target / 阻塞式关节运动到关节目标 |
+| `MovJSync(CartesianPoint)` | `target, speed, acc, wait?, blend?, coor?, tool?, relativeBlend?` | Blocking joint move to Cartesian target / 阻塞式关节运动到笛卡尔目标 |
+| `MovLSync(CartesianPoint)` | `target, speed, acc, wait?, blend?, coor?, tool?, relativeBlend?` | Blocking linear move to Cartesian target / 阻塞式直线运动到笛卡尔目标 |
+| `MovLSync(JointPoint)` | `target, speed, acc, wait?, blend?, coor?, tool?, relativeBlend?` | Blocking linear move to joint target / 阻塞式直线运动到关节目标 |
+| `MovCSync` | `middle, target, speed, acc, wait?, blend?, coor?, tool?, relativeBlend?` | Blocking circular arc move / 阻塞式圆弧运动 |
+| `MovCircleSync` | `middle, target, circleNum, speed, acc, wait?, blend?, coor?, tool?, relativeBlend?` | Blocking full circle move / 阻塞式整圆运动 |
 | `WaitForCriData` | `timeout` | Wait for first CRI frame / 等待首帧 CRI 数据 |
+
+### Parameter Reference / 参数参考
+
+| Parameter | Type | Default | Required | Description / 描述 |
+|-----------|------|---------|----------|---------------------|
+| `target` | `JointPoint` / `CartesianPoint` | — | Yes | Target position / 目标位置 |
+| `speed` | `double` | — | Yes | Speed (mm/s for linear, deg/s for joint) / 速度（直线 mm/s，关节 deg/s） |
+| `acc` | `double` | — | Yes | Acceleration / 加速度 |
+| `wait` | `MotionWaitOptions?` | `null` | No | Wait options (timeout, tolerance, etc.) / 等待选项（超时、容差等） |
+| `blend` | `double?` | `null` | No | Blend radius (mm). Mutually exclusive with `relativeBlend` — if both are set, `relativeBlend` is ignored. Omit for no transition / 平滑半径（mm）。与 `relativeBlend` 互斥——同时传入时 `relativeBlend` 无效。不传表示无过渡 |
+| `coor` | `double[]?` | `null` | No | User coordinate frame (6 elements). `null` = omitted from command / 用户坐标系（6 个元素）。`null` 时指令中不包含该字段 |
+| `tool` | `double[]?` | `null` | No | Tool coordinate frame (6 elements). `null` = omitted from command / 工具坐标系（6 个元素）。`null` 时指令中不包含该字段 |
+| `relativeBlend` | `double?` | `null` | No | Relative blend ratio (0–1). Mutually exclusive with `blend` — if both are set, this is ignored / 相对平滑比（0–1）。与 `blend` 互斥——同时传入时此参数无效 |
+| `instructions` | `IReadOnlyList<MoveInstruction>` | — | Yes | List of move instructions / 运动指令列表 |
+| `middle` | `CartesianPoint` | — | Yes | Intermediate/via point (for `MovC`/`MovCircle`) / 中间/经过点（`MovC`/`MovCircle` 用） |
+| `circleNum` | `int` | — | Yes | Number of full circles (for `MovCircleSync`) / 整圆圈数（`MovCircleSync` 用） |
+| `timeout` | `double` | — | Yes | Timeout in seconds for `WaitForCriData` / `WaitForCriData` 超时时间（秒） |
 
 ### Setup / 设置
 
