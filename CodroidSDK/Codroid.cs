@@ -79,6 +79,7 @@ namespace Codroid
         /// 后台 UDP 接收线程持续更新的同一实例；直接读取需注意并发，必要时结合锁或仅用只读快照属性 <see cref="CriData"/>。
         /// </summary>
         /// <value>内部实时数据对象的直接引用。</value>
+        [Obsolete("不保证线程安全，可能读到半更新数据。请使用 CriData（返回深拷贝）。", false)]
         public CriRealTimeData Data => _criData;
 
         /// <summary>
@@ -757,23 +758,23 @@ namespace Codroid
         /// <exception cref="CodroidCommandException">控制器报错。</exception>
         public async Task<CommonResponse> AposToCpos(
             double[] jointDegrees,
-            double[] userFrame,
-            double[] toolFrame,
+            double[]? userFrame = null,
+            double[]? toolFrame = null,
             double[]? externalAxisPositions = null)
         {
             RobotKinematics.RequireVector6(nameof(jointDegrees), jointDegrees);
-            RobotKinematics.RequireVector6(nameof(userFrame), userFrame);
-            RobotKinematics.RequireVector6(nameof(toolFrame), toolFrame);
+            if (userFrame != null) RobotKinematics.RequireVector6(nameof(userFrame), userFrame);
+            if (toolFrame != null) RobotKinematics.RequireVector6(nameof(toolFrame), toolFrame);
             var ep = externalAxisPositions ?? Array.Empty<double>();
 
             int currentId = NextId();
-            var db = new
-            {
-                jp = jointDegrees,
-                coor = userFrame,
-                tool = toolFrame,
-                ep
-            };
+            object db = userFrame != null && toolFrame != null
+                ? new { jp = jointDegrees, coor = userFrame, tool = toolFrame, ep }
+                : userFrame != null
+                    ? new { jp = jointDegrees, coor = userFrame, ep }
+                    : toolFrame != null
+                        ? new { jp = jointDegrees, tool = toolFrame, ep }
+                        : new { jp = jointDegrees, ep };
             return await _TcpClient.SendCommand(currentId, "Robot/apostocpos", db);
         }
 
@@ -791,8 +792,8 @@ namespace Codroid
         /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
         public async Task<double[]> AposToCposPose(
             double[] jointDegrees,
-            double[] userFrame,
-            double[] toolFrame,
+            double[]? userFrame = null,
+            double[]? toolFrame = null,
             double[]? externalAxisPositions = null)
         {
             var resp = await AposToCpos(jointDegrees, userFrame, toolFrame, externalAxisPositions);
@@ -811,18 +812,21 @@ namespace Codroid
         /// <exception cref="CodroidCommandException">控制器报错。</exception>
         public async Task<CommonResponse> CposToApos(
             double[] cartesianMmDeg,
-            double[] referenceJointDegrees,
+            double[]? referenceJointDegrees = null,
             double[]? externalAxisPositions = null)
         {
             RobotKinematics.RequireVector6(nameof(cartesianMmDeg), cartesianMmDeg);
-            RobotKinematics.RequireVector6(nameof(referenceJointDegrees), referenceJointDegrees);
+            var rj = referenceJointDegrees
+                ?? CriData?.JointPosition
+                ?? new[] { 20.0, 20, 20, 20, 20, 20 };
+            RobotKinematics.RequireVector6(nameof(rj), rj);
             var ep = externalAxisPositions ?? Array.Empty<double>();
 
             int currentId = NextId();
             var db = new
             {
                 cp = cartesianMmDeg,
-                rj = referenceJointDegrees,
+                rj,
                 ep
             };
             return await _TcpClient.SendCommand(currentId, "Robot/cpostoapos", db);
@@ -841,7 +845,7 @@ namespace Codroid
         /// <exception cref="CodroidCommandException">控制器报错或其它执行失败。</exception>
         public async Task<double[]> CposToAposJoints(
             double[] cartesianMmDeg,
-            double[] referenceJointDegrees,
+            double[]? referenceJointDegrees = null,
             double[]? externalAxisPositions = null)
         {
             var resp = await CposToApos(cartesianMmDeg, referenceJointDegrees, externalAxisPositions);

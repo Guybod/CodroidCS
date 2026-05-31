@@ -1,6 +1,6 @@
 # CodroidCS SDK 手册
 
-**版本:** 2.1.6 | **命名空间:** `Codroid`
+**版本:** 2.1.7 | **命名空间:** `Codroid`
 
 ---
 
@@ -625,7 +625,7 @@ public Task<CommonResponse> MovJ(CartesianPoint target, double speed, double acc
 | `blend` | `double?` | null | 平滑半径。与 `relativeBlend` 互斥——同时传入时 `relativeBlend` 无效。不传表示无过渡 |
 | `coor` | `double[]?` | null | 用户坐标系。null 时指令中不包含该字段 |
 | `tool` | `double[]?` | null | 工具坐标系。null 时指令中不包含该字段 |
-| `relativeBlend` | `double?` | null | 相对平滑比（0–1）。与 `blend` 互斥——同时传入时此参数无效 |
+| `relativeBlend` | `double?` | null | 相对平滑比（0–100）。与 `blend` 互斥——同时传入时此参数无效 |
 
 **返回值：** `Task<CommonResponse>` — 控制器响应
 
@@ -659,7 +659,7 @@ public Task<CommonResponse> MovL(JointPoint target, double speed, double acc,
 | `blend` | `double?` | null | 平滑半径。与 `relativeBlend` 互斥——同时传入时 `relativeBlend` 无效。不传表示无过渡 |
 | `coor` | `double[]?` | null | 用户坐标系。null 时指令中不包含该字段 |
 | `tool` | `double[]?` | null | 工具坐标系。null 时指令中不包含该字段 |
-| `relativeBlend` | `double?` | null | 相对平滑比（0–1）。与 `blend` 互斥——同时传入时此参数无效 |
+| `relativeBlend` | `double?` | null | 相对平滑比（0–100）。与 `blend` 互斥——同时传入时此参数无效 |
 
 **返回值：** `Task<CommonResponse>` — 控制器响应
 
@@ -693,7 +693,7 @@ public Task<CommonResponse> MovC(CartesianPoint middle, CartesianPoint target,
 | `blend` | `double?` | null | 平滑半径。与 `relativeBlend` 互斥——同时传入时 `relativeBlend` 无效。不传表示无过渡 |
 | `coor` | `double[]?` | null | 用户坐标系。null 时指令中不包含该字段 |
 | `tool` | `double[]?` | null | 工具坐标系。null 时指令中不包含该字段 |
-| `relativeBlend` | `double?` | null | 相对平滑比（0–1）。与 `blend` 互斥——同时传入时此参数无效 |
+| `relativeBlend` | `double?` | null | 相对平滑比（0–100）。与 `blend` 互斥——同时传入时此参数无效 |
 
 **返回值：** `Task<CommonResponse>` — 控制器响应
 
@@ -726,7 +726,7 @@ public Task<CommonResponse> MovCircle(CartesianPoint middle, CartesianPoint targ
 | `blend` | `double?` | null | 平滑半径。与 `relativeBlend` 互斥——同时传入时 `relativeBlend` 无效。不传表示无过渡 |
 | `coor` | `double[]?` | null | 用户坐标系。null 时指令中不包含该字段 |
 | `tool` | `double[]?` | null | 工具坐标系。null 时指令中不包含该字段 |
-| `relativeBlend` | `double?` | null | 相对平滑比（0–1）。与 `blend` 互斥——同时传入时此参数无效 |
+| `relativeBlend` | `double?` | null | 相对平滑比（0–100）。与 `blend` 互斥——同时传入时此参数无效 |
 
 **返回值：** `Task<CommonResponse>` — 控制器响应
 
@@ -795,7 +795,7 @@ public bool MovJSync(CartesianPoint target, double speed, double acc,
 | `blend` | `double?` | null | 平滑半径。与 `relativeBlend` 互斥——同时传入时 `relativeBlend` 无效。不传表示无过渡 |
 | `coor` | `double[]?` | null | 用户坐标系。null 时指令中不包含该字段 |
 | `tool` | `double[]?` | null | 工具坐标系。null 时指令中不包含该字段 |
-| `relativeBlend` | `double?` | null | 相对平滑比（0–1）。与 `blend` 互斥——同时传入时此参数无效 |
+| `relativeBlend` | `double?` | null | 相对平滑比（0–100）。与 `blend` 互斥——同时传入时此参数无效 |
 
 **返回值：** `bool` — 成功到达目标返回 `true`
 
@@ -836,7 +836,7 @@ public bool MovLSync(JointPoint target, double speed, double acc,
 | `blend` | `double?` | null | 平滑半径。与 `relativeBlend` 互斥——同时传入时 `relativeBlend` 无效。不传表示无过渡 |
 | `coor` | `double[]?` | null | 用户坐标系。null 时指令中不包含该字段 |
 | `tool` | `double[]?` | null | 工具坐标系。null 时指令中不包含该字段 |
-| `relativeBlend` | `double?` | null | 相对平滑比（0–1）。与 `blend` 互斥——同时传入时此参数无效 |
+| `relativeBlend` | `double?` | null | 相对平滑比（0–100）。与 `blend` 互斥——同时传入时此参数无效 |
 
 **返回值：** `bool` — 成功到达目标返回 `true`
 
@@ -874,7 +874,7 @@ public bool MovCSync(CartesianPoint middle, CartesianPoint target,
 | `blend` | `double?` | null | 平滑半径。与 `relativeBlend` 互斥——同时传入时 `relativeBlend` 无效。不传表示无过渡 |
 | `coor` | `double[]?` | null | 用户坐标系。null 时指令中不包含该字段 |
 | `tool` | `double[]?` | null | 工具坐标系。null 时指令中不包含该字段 |
-| `relativeBlend` | `double?` | null | 相对平滑比（0–1）。与 `blend` 互斥——同时传入时此参数无效 |
+| `relativeBlend` | `double?` | null | 相对平滑比（0–100）。与 `blend` 互斥——同时传入时此参数无效 |
 
 **返回值：** `bool` — 成功到达目标返回 `true`
 
@@ -907,7 +907,7 @@ public bool MovCircleSync(CartesianPoint middle, CartesianPoint target,
 | `blend` | `double?` | null | 平滑半径。与 `relativeBlend` 互斥——同时传入时 `relativeBlend` 无效。不传表示无过渡 |
 | `coor` | `double[]?` | null | 用户坐标系。null 时指令中不包含该字段 |
 | `tool` | `double[]?` | null | 工具坐标系。null 时指令中不包含该字段 |
-| `relativeBlend` | `double?` | null | 相对平滑比（0–1）。与 `blend` 互斥——同时传入时此参数无效 |
+| `relativeBlend` | `double?` | null | 相对平滑比（0–100）。与 `blend` 互斥——同时传入时此参数无效 |
 
 **返回值：** `bool` — 成功到达目标返回 `true`
 
@@ -2099,7 +2099,7 @@ var movePointFromCart = MovePoint.FromCartesian(cp);
 | `Speed` | `double` | -- | 速度值（直线 mm/s，关节 deg/s） |
 | `Acc` | `double` | -- | 加速度值 |
 | `Blend` | `double?` | `null` | 混合半径（直线 mm，关节 deg）。与 `RelativeBlend` 互斥。不传表示无过渡 |
-| `RelativeBlend` | `double?` | `null` | 相对混合比（0--1）。与 `Blend` 互斥——同时设置时此属性无效 |
+| `RelativeBlend` | `double?` | `null` | 相对混合比（0--100）。与 `Blend` 互斥——同时设置时此属性无效 |
 | `TargetPoint` | `MovePoint` | -- | 本段的目标点 |
 | `MiddlePoint` | `MovePoint?` | `null` | 中间/经过点（`movC` 和 `movCircle` 必需） |
 | `Coor` | `double[]?` | `null` | 坐标系定义 |
@@ -2127,7 +2127,7 @@ var movePointFromCart = MovePoint.FromCartesian(cp);
 | `blend` | `double?` | `null` | 混合半径。与 `relativeBlend` 互斥——同时传入时 `relativeBlend` 无效。不传表示无过渡 |
 | `coor` | `double[]?` | `null` | 用户坐标系。null 时指令中不包含该字段 |
 | `tool` | `double[]?` | `null` | 工具坐标系。null 时指令中不包含该字段 |
-| `relativeBlend` | `double?` | `null` | 相对混合比（0--1）。与 `blend` 互斥——同时传入时此参数无效 |
+| `relativeBlend` | `double?` | `null` | 相对混合比（0--100）。与 `blend` 互斥——同时传入时此参数无效 |
 
 #### 示例
 

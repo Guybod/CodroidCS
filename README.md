@@ -223,7 +223,7 @@ CRI UDP 线上单位是 m/rad，SDK 对外统一使用 mm/deg；`CriRealtimeDisp
 从 2.1.2 版本开始，SDK 新增 `.NET Framework 4.6.2+` 目标，适用于 WinForms / WPF / 老 .NET Framework 项目。
 
 ```xml
-<PackageReference Include="Codroidsdk" Version="2.1.6" />
+<PackageReference Include="Codroidsdk" Version="2.1.7" />
 ```
 
 注意事项：

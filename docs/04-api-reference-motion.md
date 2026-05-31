@@ -170,7 +170,7 @@ var movePointFromCart = MovePoint.FromCartesian(cp);
 | `Speed` | `double` | — | Speed value (mm/s for linear, deg/s for joint) / 速度值（直线 mm/s，关节 deg/s） |
 | `Acc` | `double` | — | Acceleration value / 加速度值 |
 | `Blend` | `double?` | `null` | Blend radius (mm for linear, deg for joint). Mutually exclusive with `RelativeBlend`. Omit for no transition / 混合半径（直线 mm，关节 deg）。与 `RelativeBlend` 互斥。不传表示无过渡 |
-| `RelativeBlend` | `double?` | `null` | Relative blend ratio (0–1). Mutually exclusive with `Blend` — if both set, this is ignored / 相对混合比（0–1）。与 `Blend` 互斥——同时设置时此属性无效 |
+| `RelativeBlend` | `double?` | `null` | Relative blend ratio (0–100). Mutually exclusive with `Blend` — if both set, this is ignored / 相对混合比（0–100）。与 `Blend` 互斥——同时设置时此属性无效 |
 | `TargetPoint` | `MovePoint` | — | The target point for this segment / 本段的目标点 |
 | `MiddlePoint` | `MovePoint?` | `null` | Middle/via point (required for `movC` and `movCircle`) / 中间/经过点（`movC` 和 `movCircle` 必需） |
 | `Coor` | `double[]?` | `null` | Coordinate system definition / 坐标系定义 |
@@ -200,7 +200,7 @@ All factories share common optional parameters: `coor` (coordinate system), `too
 | `blend` | `double?` | `null` | Blend radius. Mutually exclusive with `relativeBlend` — if both set, `relativeBlend` is ignored. Omit for no transition / 平滑半径。与 `relativeBlend` 互斥——同时传入时 `relativeBlend` 无效。不传表示无过渡 |
 | `coor` | `double[]?` | `null` | User coordinate frame. `null` = omitted from command / 用户坐标系。`null` 时指令中不包含该字段 |
 | `tool` | `double[]?` | `null` | Tool coordinate frame. `null` = omitted from command / 工具坐标系。`null` 时指令中不包含该字段 |
-| `relativeBlend` | `double?` | `null` | Relative blend (0–1). Mutually exclusive with `blend` — if both set, this is ignored / 相对混合比（0–1）。与 `blend` 互斥——同时传入时此参数无效 |
+| `relativeBlend` | `double?` | `null` | Relative blend (0–100). Mutually exclusive with `blend` — if both set, this is ignored / 相对混合比（0–100）。与 `blend` 互斥——同时传入时此参数无效 |
 
 ### Examples / 示例
 
@@ -476,7 +476,7 @@ The `*Sync` methods send motion commands and then automatically poll CRI data un
 | `blend` | `double?` | `null` | No | Blend radius (mm). Mutually exclusive with `relativeBlend` — if both are set, `relativeBlend` is ignored. Omit for no transition / 平滑半径（mm）。与 `relativeBlend` 互斥——同时传入时 `relativeBlend` 无效。不传表示无过渡 |
 | `coor` | `double[]?` | `null` | No | User coordinate frame (6 elements). `null` = omitted from command / 用户坐标系（6 个元素）。`null` 时指令中不包含该字段 |
 | `tool` | `double[]?` | `null` | No | Tool coordinate frame (6 elements). `null` = omitted from command / 工具坐标系（6 个元素）。`null` 时指令中不包含该字段 |
-| `relativeBlend` | `double?` | `null` | No | Relative blend ratio (0–1). Mutually exclusive with `blend` — if both are set, this is ignored / 相对平滑比（0–1）。与 `blend` 互斥——同时传入时此参数无效 |
+| `relativeBlend` | `double?` | `null` | No | Relative blend ratio (0–100). Mutually exclusive with `blend` — if both are set, this is ignored / 相对平滑比（0–100）。与 `blend` 互斥——同时传入时此参数无效 |
 | `instructions` | `IReadOnlyList<MoveInstruction>` | — | Yes | List of move instructions / 运动指令列表 |
 | `middle` | `CartesianPoint` | — | Yes | Intermediate/via point (for `MovC`/`MovCircle`) / 中间/经过点（`MovC`/`MovCircle` 用） |
 | `circleNum` | `int` | — | Yes | Number of full circles (for `MovCircleSync`) / 整圆圈数（`MovCircleSync` 用） |

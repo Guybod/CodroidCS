@@ -1,6 +1,6 @@
 # CodroidCS SDK Manual
 
-**Version:** 2.1.6 | **Namespace:** `Codroid`
+**Version:** 2.1.7 | **Namespace:** `Codroid`
 
 ---
 
@@ -623,7 +623,7 @@ public Task<CommonResponse> MovJ(CartesianPoint target, double speed, double acc
 | `blend` | `double?` | null | Blend radius. Mutually exclusive with `relativeBlend` — if both set, `relativeBlend` is ignored. Omit for no transition |
 | `coor` | `double[]?` | null | User coordinate frame. `null` = omitted from command |
 | `tool` | `double[]?` | null | Tool coordinate frame. `null` = omitted from command |
-| `relativeBlend` | `double?` | null | Relative blend ratio (0–1). Mutually exclusive with `blend` — if both set, this is ignored |
+| `relativeBlend` | `double?` | null | Relative blend ratio (0–100). Mutually exclusive with `blend` — if both set, this is ignored |
 
 **Returns:** `Task<CommonResponse>` — controller response
 
@@ -657,7 +657,7 @@ public Task<CommonResponse> MovL(JointPoint target, double speed, double acc,
 | `blend` | `double?` | null | Blend radius. Mutually exclusive with `relativeBlend` — if both set, `relativeBlend` is ignored. Omit for no transition |
 | `coor` | `double[]?` | null | User coordinate frame. `null` = omitted from command |
 | `tool` | `double[]?` | null | Tool coordinate frame. `null` = omitted from command |
-| `relativeBlend` | `double?` | null | Relative blend ratio (0–1). Mutually exclusive with `blend` — if both set, this is ignored |
+| `relativeBlend` | `double?` | null | Relative blend ratio (0–100). Mutually exclusive with `blend` — if both set, this is ignored |
 
 **Returns:** `Task<CommonResponse>` — controller response
 
@@ -691,7 +691,7 @@ public Task<CommonResponse> MovC(CartesianPoint middle, CartesianPoint target,
 | `blend` | `double?` | null | Blend radius. Mutually exclusive with `relativeBlend` — if both set, `relativeBlend` is ignored. Omit for no transition |
 | `coor` | `double[]?` | null | User coordinate frame. `null` = omitted from command |
 | `tool` | `double[]?` | null | Tool coordinate frame. `null` = omitted from command |
-| `relativeBlend` | `double?` | null | Relative blend ratio (0–1). Mutually exclusive with `blend` — if both set, this is ignored |
+| `relativeBlend` | `double?` | null | Relative blend ratio (0–100). Mutually exclusive with `blend` — if both set, this is ignored |
 
 **Returns:** `Task<CommonResponse>` — controller response
 
@@ -724,7 +724,7 @@ public Task<CommonResponse> MovCircle(CartesianPoint middle, CartesianPoint targ
 | `blend` | `double?` | null | Blend radius. Mutually exclusive with `relativeBlend` — if both set, `relativeBlend` is ignored. Omit for no transition |
 | `coor` | `double[]?` | null | User coordinate frame. `null` = omitted from command |
 | `tool` | `double[]?` | null | Tool coordinate frame. `null` = omitted from command |
-| `relativeBlend` | `double?` | null | Relative blend ratio (0–1). Mutually exclusive with `blend` — if both set, this is ignored |
+| `relativeBlend` | `double?` | null | Relative blend ratio (0–100). Mutually exclusive with `blend` — if both set, this is ignored |
 
 **Returns:** `Task<CommonResponse>` — controller response
 
@@ -793,7 +793,7 @@ public bool MovJSync(CartesianPoint target, double speed, double acc,
 | `blend` | `double?` | null | Blend radius. Mutually exclusive with `relativeBlend` — if both set, `relativeBlend` is ignored. Omit for no transition |
 | `coor` | `double[]?` | null | User coordinate frame. `null` = omitted from command |
 | `tool` | `double[]?` | null | Tool coordinate frame. `null` = omitted from command |
-| `relativeBlend` | `double?` | null | Relative blend ratio (0–1). Mutually exclusive with `blend` — if both set, this is ignored |
+| `relativeBlend` | `double?` | null | Relative blend ratio (0–100). Mutually exclusive with `blend` — if both set, this is ignored |
 
 **Returns:** `bool` — `true` when target is reached
 
@@ -834,7 +834,7 @@ public bool MovLSync(JointPoint target, double speed, double acc,
 | `blend` | `double?` | null | Blend radius. Mutually exclusive with `relativeBlend` — if both set, `relativeBlend` is ignored. Omit for no transition |
 | `coor` | `double[]?` | null | User coordinate frame. `null` = omitted from command |
 | `tool` | `double[]?` | null | Tool coordinate frame. `null` = omitted from command |
-| `relativeBlend` | `double?` | null | Relative blend ratio (0–1). Mutually exclusive with `blend` — if both set, this is ignored |
+| `relativeBlend` | `double?` | null | Relative blend ratio (0–100). Mutually exclusive with `blend` — if both set, this is ignored |
 
 **Returns:** `bool` — `true` when target is reached
 
@@ -872,7 +872,7 @@ public bool MovCSync(CartesianPoint middle, CartesianPoint target,
 | `blend` | `double?` | null | Blend radius. Mutually exclusive with `relativeBlend` — if both set, `relativeBlend` is ignored. Omit for no transition |
 | `coor` | `double[]?` | null | User coordinate frame. `null` = omitted from command |
 | `tool` | `double[]?` | null | Tool coordinate frame. `null` = omitted from command |
-| `relativeBlend` | `double?` | null | Relative blend ratio (0–1). Mutually exclusive with `blend` — if both set, this is ignored |
+| `relativeBlend` | `double?` | null | Relative blend ratio (0–100). Mutually exclusive with `blend` — if both set, this is ignored |
 
 **Returns:** `bool` — `true` when target is reached
 
@@ -905,7 +905,7 @@ public bool MovCircleSync(CartesianPoint middle, CartesianPoint target,
 | `blend` | `double?` | null | Blend radius. Mutually exclusive with `relativeBlend` — if both set, `relativeBlend` is ignored. Omit for no transition |
 | `coor` | `double[]?` | null | User coordinate frame. `null` = omitted from command |
 | `tool` | `double[]?` | null | Tool coordinate frame. `null` = omitted from command |
-| `relativeBlend` | `double?` | null | Relative blend ratio (0–1). Mutually exclusive with `blend` — if both set, this is ignored |
+| `relativeBlend` | `double?` | null | Relative blend ratio (0–100). Mutually exclusive with `blend` — if both set, this is ignored |
 
 **Returns:** `bool` — `true` when target is reached
 
@@ -2068,7 +2068,7 @@ var movePointFromCart = MovePoint.FromCartesian(cp);
 | `Speed` | `double` | -- | Speed value (mm/s for linear, deg/s for joint) |
 | `Acc` | `double` | -- | Acceleration value |
 | `Blend` | `double?` | `null` | Blend radius (mm for linear, deg for joint). Mutually exclusive with `RelativeBlend`. Omit for no transition |
-| `RelativeBlend` | `double?` | `null` | Relative blend ratio (0-1). Mutually exclusive with `Blend` — if both set, this is ignored |
+| `RelativeBlend` | `double?` | `null` | Relative blend ratio (0-100). Mutually exclusive with `Blend` — if both set, this is ignored |
 | `TargetPoint` | `MovePoint` | -- | The target point for this segment |
 | `MiddlePoint` | `MovePoint?` | `null` | Middle/via point (required for `movC` and `movCircle`) |
 | `Coor` | `double[]?` | `null` | Coordinate system definition |
@@ -2096,7 +2096,7 @@ All factories share common optional parameters: `coor` (coordinate system), `too
 | `blend` | `double?` | `null` | Blend radius. Mutually exclusive with `relativeBlend` — if both set, `relativeBlend` is ignored. Omit for no transition |
 | `coor` | `double[]?` | `null` | User coordinate frame. `null` = omitted from command |
 | `tool` | `double[]?` | `null` | Tool coordinate frame. `null` = omitted from command |
-| `relativeBlend` | `double?` | `null` | Relative blend (0-1). Mutually exclusive with `blend` — if both set, this is ignored |
+| `relativeBlend` | `double?` | `null` | Relative blend (0-100). Mutually exclusive with `blend` — if both set, this is ignored |
 
 ### Examples
 

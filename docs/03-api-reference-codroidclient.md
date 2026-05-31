@@ -250,7 +250,7 @@ public Task<CommonResponse> MovJ(CartesianPoint target, double speed, double acc
 | `blend` | `double?` | null | Blend radius. Mutually exclusive with `relativeBlend` — if both set, `relativeBlend` is ignored. Omit for no transition / 平滑半径。与 `relativeBlend` 互斥——同时传入时 `relativeBlend` 无效。不传表示无过渡 |
 | `coor` | `double[]?` | null | User coordinate frame. `null` = omitted from command / 用户坐标系。`null` 时指令中不包含该字段 |
 | `tool` | `double[]?` | null | Tool coordinate frame. `null` = omitted from command / 工具坐标系。`null` 时指令中不包含该字段 |
-| `relativeBlend` | `double?` | null | Relative blend (0–1). Mutually exclusive with `blend` — if both set, this is ignored / 相对平滑比（0–1）。与 `blend` 互斥——同时传入时此参数无效 |
+| `relativeBlend` | `double?` | null | Relative blend (0–100). Mutually exclusive with `blend` — if both set, this is ignored / 相对平滑比（0–100）。与 `blend` 互斥——同时传入时此参数无效 |
 
 ```csharp
 // Joint target / 关节目标
@@ -280,7 +280,7 @@ public Task<CommonResponse> MovL(JointPoint target, double speed, double acc,
 | `blend` | `double?` | null | Blend radius (mm). Mutually exclusive with `relativeBlend` — if both set, `relativeBlend` is ignored. Omit for no transition / 平滑半径（mm）。与 `relativeBlend` 互斥——同时传入时 `relativeBlend` 无效。不传表示无过渡 |
 | `coor` | `double[]?` | null | User coordinate frame (6 elements). `null` = omitted from command / 用户坐标系（6 个元素）。`null` 时指令中不包含该字段 |
 | `tool` | `double[]?` | null | Tool coordinate frame (6 elements). `null` = omitted from command / 工具坐标系（6 个元素）。`null` 时指令中不包含该字段 |
-| `relativeBlend` | `double?` | null | Relative blend ratio (0–1). Mutually exclusive with `blend` — if both set, this is ignored / 相对平滑比（0–1）。与 `blend` 互斥——同时传入时此参数无效 |
+| `relativeBlend` | `double?` | null | Relative blend ratio (0–100). Mutually exclusive with `blend` — if both set, this is ignored / 相对平滑比（0–100）。与 `blend` 互斥——同时传入时此参数无效 |
 
 ```csharp
 // Cartesian linear move / 笛卡尔直线运动
@@ -310,7 +310,7 @@ public Task<CommonResponse> MovC(CartesianPoint middle, CartesianPoint target,
 | `blend` | `double?` | null | Blend radius (mm). Mutually exclusive with `relativeBlend` — if both set, `relativeBlend` is ignored. Omit for no transition / 平滑半径（mm）。与 `relativeBlend` 互斥——同时传入时 `relativeBlend` 无效。不传表示无过渡 |
 | `coor` | `double[]?` | null | User coordinate frame. `null` = omitted from command / 用户坐标系。`null` 时指令中不包含该字段 |
 | `tool` | `double[]?` | null | Tool coordinate frame. `null` = omitted from command / 工具坐标系。`null` 时指令中不包含该字段 |
-| `relativeBlend` | `double?` | null | Relative blend ratio (0–1). Mutually exclusive with `blend` — if both set, this is ignored / 相对平滑比（0–1）。与 `blend` 互斥——同时传入时此参数无效 |
+| `relativeBlend` | `double?` | null | Relative blend ratio (0–100). Mutually exclusive with `blend` — if both set, this is ignored / 相对平滑比（0–100）。与 `blend` 互斥——同时传入时此参数无效 |
 
 ```csharp
 await robot.MovC(
@@ -339,7 +339,7 @@ public Task<CommonResponse> MovCircle(CartesianPoint middle, CartesianPoint targ
 | `blend` | `double?` | null | Blend radius (mm). Mutually exclusive with `relativeBlend` — if both set, `relativeBlend` is ignored. Omit for no transition / 平滑半径（mm）。与 `relativeBlend` 互斥——同时传入时 `relativeBlend` 无效。不传表示无过渡 |
 | `coor` | `double[]?` | null | User coordinate frame. `null` = omitted from command / 用户坐标系。`null` 时指令中不包含该字段 |
 | `tool` | `double[]?` | null | Tool coordinate frame. `null` = omitted from command / 工具坐标系。`null` 时指令中不包含该字段 |
-| `relativeBlend` | `double?` | null | Relative blend ratio (0–1). Mutually exclusive with `blend` — if both set, this is ignored / 相对平滑比（0–1）。与 `blend` 互斥——同时传入时此参数无效 |
+| `relativeBlend` | `double?` | null | Relative blend ratio (0–100). Mutually exclusive with `blend` — if both set, this is ignored / 相对平滑比（0–100）。与 `blend` 互斥——同时传入时此参数无效 |
 
 ```csharp
 await robot.MovCircle(
@@ -405,7 +405,7 @@ public bool MovJSync(CartesianPoint target, double speed, double acc,
 | `blend` | `double?` | null | Blend radius (mm). Mutually exclusive with `relativeBlend` — if both set, `relativeBlend` is ignored. Omit for no transition / 平滑半径（mm）。与 `relativeBlend` 互斥——同时传入时 `relativeBlend` 无效。不传表示无过渡 |
 | `coor` | `double[]?` | null | User coordinate frame. `null` = omitted from command / 用户坐标系。`null` 时指令中不包含该字段 |
 | `tool` | `double[]?` | null | Tool coordinate frame. `null` = omitted from command / 工具坐标系。`null` 时指令中不包含该字段 |
-| `relativeBlend` | `double?` | null | Relative blend ratio (0–1). Mutually exclusive with `blend` — if both set, this is ignored / 相对平滑比（0–1）。与 `blend` 互斥——同时传入时此参数无效 |
+| `relativeBlend` | `double?` | null | Relative blend ratio (0–100). Mutually exclusive with `blend` — if both set, this is ignored / 相对平滑比（0–100）。与 `blend` 互斥——同时传入时此参数无效 |
 
 ```csharp
 var wait = new MotionWaitOptions
@@ -440,7 +440,7 @@ public bool MovLSync(JointPoint target, double speed, double acc,
 | `blend` | `double?` | null | Blend radius (mm). Mutually exclusive with `relativeBlend` — if both set, `relativeBlend` is ignored. Omit for no transition / 平滑半径（mm）。与 `relativeBlend` 互斥——同时传入时 `relativeBlend` 无效。不传表示无过渡 |
 | `coor` | `double[]?` | null | User coordinate frame. `null` = omitted from command / 用户坐标系。`null` 时指令中不包含该字段 |
 | `tool` | `double[]?` | null | Tool coordinate frame. `null` = omitted from command / 工具坐标系。`null` 时指令中不包含该字段 |
-| `relativeBlend` | `double?` | null | Relative blend ratio (0–1). Mutually exclusive with `blend` — if both set, this is ignored / 相对平滑比（0–1）。与 `blend` 互斥——同时传入时此参数无效 |
+| `relativeBlend` | `double?` | null | Relative blend ratio (0–100). Mutually exclusive with `blend` — if both set, this is ignored / 相对平滑比（0–100）。与 `blend` 互斥——同时传入时此参数无效 |
 
 ```csharp
 robot.MovLSync(
@@ -474,7 +474,7 @@ public bool MovCSync(CartesianPoint middle, CartesianPoint target,
 | `blend` | `double?` | null | Blend radius (mm). Mutually exclusive with `relativeBlend` — if both set, `relativeBlend` is ignored. Omit for no transition / 平滑半径（mm）。与 `relativeBlend` 互斥——同时传入时 `relativeBlend` 无效。不传表示无过渡 |
 | `coor` | `double[]?` | null | User coordinate frame. `null` = omitted from command / 用户坐标系。`null` 时指令中不包含该字段 |
 | `tool` | `double[]?` | null | Tool coordinate frame. `null` = omitted from command / 工具坐标系。`null` 时指令中不包含该字段 |
-| `relativeBlend` | `double?` | null | Relative blend ratio (0–1). Mutually exclusive with `blend` — if both set, this is ignored / 相对平滑比（0–1）。与 `blend` 互斥——同时传入时此参数无效 |
+| `relativeBlend` | `double?` | null | Relative blend ratio (0–100). Mutually exclusive with `blend` — if both set, this is ignored / 相对平滑比（0–100）。与 `blend` 互斥——同时传入时此参数无效 |
 
 ```csharp
 robot.MovCSync(
@@ -503,7 +503,7 @@ public bool MovCircleSync(CartesianPoint middle, CartesianPoint target,
 | `blend` | `double?` | null | Blend radius (mm). Mutually exclusive with `relativeBlend` — if both set, `relativeBlend` is ignored. Omit for no transition / 平滑半径（mm）。与 `relativeBlend` 互斥——同时传入时 `relativeBlend` 无效。不传表示无过渡 |
 | `coor` | `double[]?` | null | User coordinate frame. `null` = omitted from command / 用户坐标系。`null` 时指令中不包含该字段 |
 | `tool` | `double[]?` | null | Tool coordinate frame. `null` = omitted from command / 工具坐标系。`null` 时指令中不包含该字段 |
-| `relativeBlend` | `double?` | null | Relative blend ratio (0–1). Mutually exclusive with `blend` — if both set, this is ignored / 相对平滑比（0–1）。与 `blend` 互斥——同时传入时此参数无效 |
+| `relativeBlend` | `double?` | null | Relative blend ratio (0–100). Mutually exclusive with `blend` — if both set, this is ignored / 相对平滑比（0–100）。与 `blend` 互斥——同时传入时此参数无效 |
 
 ---
 

@@ -1,5 +1,15 @@
 # Codroid C# SDK 版本说明
 
+## v2.1.7（2026-05-30）
+
+### 改进
+
+- **`Data` 属性标记废弃**：标记 `[Obsolete]`，提示使用 `CriData`（返回线程安全深拷贝）
+- **`AposToCpos` / `AposToCposPose` 参数改可选**：`userFrame`/`toolFrame` 默认 `null`，不传时指令中不包含 `coor`/`tool` 字段，与 Python 行为对齐
+- **`CposToApos` / `CposToAposJoints` 参数改可选**：`referenceJointDegrees` 默认 `null`，优先使用当前关节角度（`CriData.JointPosition`），CRI 未启动时兜底 `[20,20,20,20,20,20]`
+
+---
+
 ## v2.1.6（2026-05-30）
 
 ### 改进
