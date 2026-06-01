@@ -1,5 +1,19 @@
 # Codroid C# SDK 版本说明
 
+## v2.1.8（2026-06-01）
+
+### Bug Fixes
+
+- **修复 SLERP `Math.Acos` 浮点溢出**：`EulerXyz.Slerp` 中 `Math.Acos(dot)` 未做 clamp，当浮点误差导致 `dot` 略超出 `[-1, 1]` 时会抛出 `ArgumentException`。现在改为 `Math.Acos(Math.Max(-1.0, Math.Min(1.0, dot)))`，与 C++ / Python 对齐
+- **修复 `blend`/`relativeBlend` 互斥逻辑**：`PackInstruction` 原先无条件复制两个字段，现在 `Blend` 有值时 `RelativeBlend` 置 `null`，确保同时传入时只下发 `blend`
+- **修复纯旋转退化情况**：`GenerateCartesian` 中当位移 `D < 1e-9` 且起始/目标姿态已相同时，原先会生成完整的退化轨迹（全是相同点），现在直接返回单点轨迹，与 C++ / Python 对齐
+
+### 新增
+
+- **`TrajectoryGenerator.GenerateMultiSegment`**：多段轨迹拼接方法，依次连接相邻路点，跳过后续段首点避免端点重复，时间戳累加。与 C++ `GenerateMultiSegment` / Python `generate_multi_segment` 对齐
+
+---
+
 ## v2.1.7（2026-05-30）
 
 ### 改进

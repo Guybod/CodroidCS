@@ -169,6 +169,9 @@ public static class TrajectoryGenerator
         // 时间标度的「距离」：
         //   - 有线位移：使用 D，使笛卡尔线速度可控
         //   - 无线位移（纯姿态）：用归一化 1.0 走时长模式
+        var q0 = EulerXyz.ToQuaternion(p0[3], p0[4], p0[5]);
+        var qf = EulerXyz.ToQuaternion(pf[3], pf[4], pf[5]);
+
         IMotionProfile profile;
         if (D >= 1e-9)
         {
@@ -176,13 +179,17 @@ public static class TrajectoryGenerator
         }
         else
         {
+            // 纯旋转且姿态已相同：直接返回单点（与 C++/Python 对齐）
+            double orientDot = Math.Abs(q0.W * qf.W + q0.X * qf.X + q0.Y * qf.Y + q0.Z * qf.Z);
+            if (orientDot >= 1.0 - 1e-9)
+            {
+                yield return new TrajectoryPoint { TimeSeconds = 0, Position = new List<double>(p0) };
+                yield break;
+            }
             if (req.Speed.HasValue)
                 throw new ArgumentException("起止位置完全相同，无法用线速度推导时间；纯姿态运动请改用 DurationSeconds。", nameof(req));
             profile = ComputeProfile(1.0, req);
         }
-
-        var q0 = EulerXyz.ToQuaternion(p0[3], p0[4], p0[5]);
-        var qf = EulerXyz.ToQuaternion(pf[3], pf[4], pf[5]);
 
         double dt = 1.0 / req.FrequencyHz;
         int n = Math.Max(2, (int)Math.Ceiling(profile.T / dt) + 1);
@@ -213,6 +220,42 @@ public static class TrajectoryGenerator
         TrajectoryProfile.Trapezoidal => TrapezoidalProfile.From(D, req),
         _ => throw new ArgumentOutOfRangeException(nameof(req)),
     };
+
+    /// <summary>
+    /// 多段轨迹拼接：依次连接相邻路点，跳过后续段首点以避免端点重复，时间戳累加。
+    /// </summary>
+    /// <param name="waypoints">至少 2 个路点，每个路点 6 维。</param>
+    /// <param name="request">采样频率、速度/时长、规划方式等。</param>
+    /// <returns>拼接后的完整轨迹点序列。</returns>
+    public static List<TrajectoryPoint> GenerateMultiSegment(
+        IReadOnlyList<IReadOnlyList<double>> waypoints,
+        TrajectoryRequest request)
+    {
+        if (waypoints == null) throw new ArgumentNullException(nameof(waypoints));
+        if (waypoints.Count < 2)
+            throw new ArgumentException("至少需要 2 个路点。", nameof(waypoints));
+
+        var result = new List<TrajectoryPoint>();
+        double tBase = 0;
+
+        for (int i = 0; i + 1 < waypoints.Count; i++)
+        {
+            var seg = Generate(waypoints[i], waypoints[i + 1], request).ToList();
+            for (int k = 0; k < seg.Count; k++)
+            {
+                // 跳过后续段的首点，避免与前段末点重复
+                if (i > 0 && k == 0) continue;
+                result.Add(new TrajectoryPoint
+                {
+                    TimeSeconds = tBase + seg[k].TimeSeconds,
+                    Position = seg[k].Position,
+                });
+            }
+            if (seg.Count > 0)
+                tBase += seg[^1].TimeSeconds;
+        }
+        return result;
+    }
 }
 
 internal interface IMotionProfile
@@ -382,7 +425,8 @@ internal static class EulerXyz
             double n = Math.Sqrt(w * w + x * x + y * y + z * z);
             return new Quaternion(w / n, x / n, y / n, z / n);
         }
-        double th0 = Math.Acos(dot);
+        // 防止浮点溢出导致 Math.Acos 抛出 ArgumentException（与 C++/Python 对齐）
+        double th0 = Math.Acos(Math.Max(-1.0, Math.Min(1.0, dot)));
         double th = th0 * t;
         double sTh = Math.Sin(th);
         double sTh0 = Math.Sin(th0);

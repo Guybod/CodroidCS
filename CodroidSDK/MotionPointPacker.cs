@@ -57,14 +57,17 @@ namespace Codroid
         public static MoveInstruction PackInstruction(MoveInstruction instruction)
         {
             Polyfills.ThrowIfNull(instruction);
+            // blend 与 relativeBlend 互斥：同时传入时 relativeBlend 不下发
+            double? blend = instruction.Blend;
+            double? relativeBlend = blend.HasValue ? null : instruction.RelativeBlend;
             return new MoveInstruction
             {
                 Type = instruction.Type,
                 CircleNum = instruction.CircleNum,
                 Speed = instruction.Speed,
                 Acc = instruction.Acc,
-                Blend = instruction.Blend,
-                RelativeBlend = instruction.RelativeBlend,
+                Blend = blend,
+                RelativeBlend = relativeBlend,
                 TargetPoint = Pack(instruction.TargetPoint),
                 MiddlePoint = instruction.MiddlePoint != null ? Pack(instruction.MiddlePoint) : null,
                 Coor = instruction.Coor,
