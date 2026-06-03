@@ -103,7 +103,7 @@ namespace Codroid
     }
 
     /// <summary>
-    /// 阻塞等待运动完成的判定参数（CRI 新鲜度 + 运动状态 + 位置误差）。
+    /// 阻塞等待运动完成的判定参数（CRI 新鲜度 + <c>InMotion</c> 停稳样本数）。
     /// </summary>
     public sealed class MotionWaitOptions
     {
@@ -119,13 +119,16 @@ namespace Codroid
         /// <summary><c>InMotion=false</c> 连续稳定样本数（默认 3）。</summary>
         public int SettledSamples { get; init; } = 3;
 
-        /// <summary>关节目标判定阈值（最大轴误差，默认 0.2 度）。</summary>
+        /// <summary>已弃用：<c>*Sync</c> 不再比对关节误差，保留仅为兼容旧代码。</summary>
+        [Obsolete("*Sync 到位判定仅使用 CRI InMotion，本属性已不再生效。")]
         public double JointToleranceDeg { get; init; } = 0.2;
 
-        /// <summary>笛卡尔位置判定阈值（欧氏距离，默认 1.0 mm）。</summary>
+        /// <summary>已弃用：<c>*Sync</c> 不再比对笛卡尔位置误差，保留仅为兼容旧代码。</summary>
+        [Obsolete("*Sync 到位判定仅使用 CRI InMotion，本属性已不再生效。")]
         public double CartesianPositionToleranceMm { get; init; } = 1.0;
 
-        /// <summary>笛卡尔姿态判定阈值（欧拉角最大分量误差，默认 1.0 度）。</summary>
+        /// <summary>已弃用：<c>*Sync</c> 不再比对笛卡尔姿态误差，保留仅为兼容旧代码。</summary>
+        [Obsolete("*Sync 到位判定仅使用 CRI InMotion，本属性已不再生效。")]
         public double CartesianOrientationToleranceDeg { get; init; } = 1.0;
     }
 

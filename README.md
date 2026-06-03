@@ -156,18 +156,16 @@ await robot.Move(new[]
 ### 阻塞与非阻塞
 
 - 非阻塞（返回 `Task`）：`MovJ` / `MovL` / `MovC` / `MovCircle` / `Move`
-- 阻塞到“运动完成且到位（CRI 判定，成功返回 `true`，异常直接抛出）”：`MovJSync` / `MovLSync` / `MovCSync` / `MovCircleSync` / `MoveSync`
+- 阻塞到“运动停稳（CRI `InMotion` 判定，成功返回 `true`，异常直接抛出）”：`MovJSync` / `MovLSync` / `MovCSync` / `MovCircleSync` / `MoveSync`
 
-`*Sync` 系列须先 `StartCriDataPush`，使用 `MotionWaitOptions` 判定完成：CRI 数据新鲜度、`InMotion=false` 连续样本、目标误差阈值（关节或笛卡尔）。
+`*Sync` 系列须先 `StartCriDataPush`，使用 `MotionWaitOptions` 判定完成：CRI 数据新鲜度、曾 `InMotion=true` 后连续 `SettledSamples` 次 `InMotion=false`。**不比对**关节角或 TCP 与目标点的位置误差。
 
 ```csharp
 var wait = new MotionWaitOptions
 {
     Timeout = TimeSpan.FromSeconds(90),
     CriStaleTimeout = TimeSpan.FromMilliseconds(700),
-    JointToleranceDeg = 0.3,
-    CartesianPositionToleranceMm = 2.0,
-    CartesianOrientationToleranceDeg = 1.5
+    SettledSamples = 3
 };
 
 robot.MovJSync(JointPoint.Degrees(new[] { 0, 0, 90, 0, 90, 0 }), 40, 100, wait);
@@ -246,7 +244,7 @@ CRI UDP 线上单位是 m/rad，SDK 对外统一使用 mm/deg；`CriRealtimeDisp
 从 2.1.2 版本开始，SDK 新增 `.NET Framework 4.6.2+` 目标，适用于 WinForms / WPF / 老 .NET Framework 项目。
 
 ```xml
-<PackageReference Include="Codroidsdk" Version="2.1.7" />
+<PackageReference Include="Codroidsdk" Version="2.1.8" />
 ```
 
 注意事项：

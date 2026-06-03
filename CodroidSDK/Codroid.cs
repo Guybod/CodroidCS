@@ -1436,21 +1436,21 @@ namespace Codroid
         }
 
         /// <summary>
-        /// 阻塞下发路径，等待 CRI 判定末段目标到位后返回 <c>true</c>。
+        /// 阻塞下发路径，等待 CRI <c>InMotion</c> 停稳后返回 <c>true</c>。
         /// </summary>
-        /// <remarks>须先 <see cref="StartCriDataPush"/>；异常（超时、急停、碰撞、未到位等）直接抛出。</remarks>
+        /// <remarks>须先 <see cref="StartCriDataPush"/>；完成条件为曾运动且连续 <see cref="MotionWaitOptions.SettledSamples"/> 次 <c>InMotion=false</c>，不比对关节/TCP 位置。</remarks>
         public bool MoveSync(IReadOnlyList<MoveInstruction> instructions, MotionWaitOptions? wait = null)
         {
             Move(instructions).ConfigureAwait(false).GetAwaiter().GetResult();
             var options = GetWait(wait);
-            WaitUntilSettledByCri(BuildMoveTargetReachedPredicate(instructions, options), "move(path)", options);
+            WaitUntilSettledByCri("move(path)", options);
             return true;
         }
 
         /// <summary>
-        /// 阻塞下发单段关节 <c>movJ</c>，等待 CRI 判定到位后返回 <c>true</c>。
+        /// 阻塞下发单段关节 <c>movJ</c>，等待 CRI <c>InMotion</c> 停稳后返回 <c>true</c>。
         /// </summary>
-        /// <remarks>须先 <see cref="StartCriDataPush"/>。</remarks>
+        /// <remarks>须先 <see cref="StartCriDataPush"/>；不比对关节/TCP 位置。</remarks>
         public bool MovJSync(
             JointPoint target,
             double speed,
@@ -1464,17 +1464,14 @@ namespace Codroid
             MovJ(target, speed, acc, blend, coor, tool, relativeBlend)
                 .ConfigureAwait(false).GetAwaiter().GetResult();
             var options = GetWait(wait);
-            WaitUntilSettledByCri(
-                current => MaxAbsDiff(current.JointPosition, target.Jp) <= options.JointToleranceDeg,
-                "movJ(JointPoint)",
-                options);
+            WaitUntilSettledByCri("movJ(JointPoint)", options);
             return true;
         }
 
         /// <summary>
-        /// 阻塞下发单段笛卡尔 <c>movJ</c>，等待 CRI 判定到位后返回 <c>true</c>。
+        /// 阻塞下发单段笛卡尔 <c>movJ</c>，等待 CRI <c>InMotion</c> 停稳后返回 <c>true</c>。
         /// </summary>
-        /// <remarks>须先 <see cref="StartCriDataPush"/>。</remarks>
+        /// <remarks>须先 <see cref="StartCriDataPush"/>；不比对关节/TCP 位置。</remarks>
         public bool MovJSync(
             CartesianPoint target,
             double speed,
@@ -1488,17 +1485,14 @@ namespace Codroid
             MovJ(target, speed, acc, blend, coor, tool, relativeBlend)
                 .ConfigureAwait(false).GetAwaiter().GetResult();
             var options = GetWait(wait);
-            WaitUntilSettledByCri(
-                current => IsCartesianTargetReached(current.TcpPose, target.Cp, options),
-                "movJ(CartesianPoint)",
-                options);
+            WaitUntilSettledByCri("movJ(CartesianPoint)", options);
             return true;
         }
 
         /// <summary>
-        /// 阻塞下发单段笛卡尔 <c>movL</c>，等待 CRI 判定到位后返回 <c>true</c>。
+        /// 阻塞下发单段笛卡尔 <c>movL</c>，等待 CRI <c>InMotion</c> 停稳后返回 <c>true</c>。
         /// </summary>
-        /// <remarks>须先 <see cref="StartCriDataPush"/>。</remarks>
+        /// <remarks>须先 <see cref="StartCriDataPush"/>；不比对关节/TCP 位置。</remarks>
         public bool MovLSync(
             CartesianPoint target,
             double speed,
@@ -1512,17 +1506,14 @@ namespace Codroid
             MovL(target, speed, acc, blend, coor, tool, relativeBlend)
                 .ConfigureAwait(false).GetAwaiter().GetResult();
             var options = GetWait(wait);
-            WaitUntilSettledByCri(
-                current => IsCartesianTargetReached(current.TcpPose, target.Cp, options),
-                "movL(CartesianPoint)",
-                options);
+            WaitUntilSettledByCri("movL(CartesianPoint)", options);
             return true;
         }
 
         /// <summary>
-        /// 阻塞下发单段关节 <c>movL</c>，等待 CRI 判定到位后返回 <c>true</c>。
+        /// 阻塞下发单段关节 <c>movL</c>，等待 CRI <c>InMotion</c> 停稳后返回 <c>true</c>。
         /// </summary>
-        /// <remarks>须先 <see cref="StartCriDataPush"/>。</remarks>
+        /// <remarks>须先 <see cref="StartCriDataPush"/>；不比对关节/TCP 位置。</remarks>
         public bool MovLSync(
             JointPoint target,
             double speed,
@@ -1536,17 +1527,14 @@ namespace Codroid
             MovL(target, speed, acc, blend, coor, tool, relativeBlend)
                 .ConfigureAwait(false).GetAwaiter().GetResult();
             var options = GetWait(wait);
-            WaitUntilSettledByCri(
-                current => MaxAbsDiff(current.JointPosition, target.Jp) <= options.JointToleranceDeg,
-                "movL(JointPoint)",
-                options);
+            WaitUntilSettledByCri("movL(JointPoint)", options);
             return true;
         }
 
         /// <summary>
-        /// 阻塞下发单段 <c>movC</c>，等待 CRI 判定到位后返回 <c>true</c>。
+        /// 阻塞下发单段 <c>movC</c>，等待 CRI <c>InMotion</c> 停稳后返回 <c>true</c>。
         /// </summary>
-        /// <remarks>须先 <see cref="StartCriDataPush"/>。</remarks>
+        /// <remarks>须先 <see cref="StartCriDataPush"/>；不比对关节/TCP 位置。</remarks>
         public bool MovCSync(
             CartesianPoint middle,
             CartesianPoint target,
@@ -1558,24 +1546,17 @@ namespace Codroid
             double[]? tool = null,
             double? relativeBlend = null)
         {
-            var instructions = new[]
-            {
-                MoveInstruction.MovC(middle, target, speed, acc, blend, coor, tool, relativeBlend)
-            };
             MovC(middle, target, speed, acc, blend, coor, tool, relativeBlend)
                 .ConfigureAwait(false).GetAwaiter().GetResult();
             var options = GetWait(wait);
-            WaitUntilSettledByCri(
-                BuildMoveTargetReachedPredicate(instructions, options),
-                "movC",
-                options);
+            WaitUntilSettledByCri("movC", options);
             return true;
         }
 
         /// <summary>
-        /// 阻塞下发单段 <c>movCircle</c>，等待 CRI 判定到位后返回 <c>true</c>。
+        /// 阻塞下发单段 <c>movCircle</c>，等待 CRI <c>InMotion</c> 停稳后返回 <c>true</c>。
         /// </summary>
-        /// <remarks>须先 <see cref="StartCriDataPush"/>。</remarks>
+        /// <remarks>须先 <see cref="StartCriDataPush"/>；不比对关节/TCP 位置。</remarks>
         public bool MovCircleSync(
             CartesianPoint middle,
             CartesianPoint target,
@@ -1588,18 +1569,10 @@ namespace Codroid
             double[]? tool = null,
             double? relativeBlend = null)
         {
-            var instructions = new[]
-            {
-                MoveInstruction.MovCircle(
-                    middle, target, circleNum, speed, acc, blend, coor, tool, relativeBlend)
-            };
             MovCircle(middle, target, circleNum, speed, acc, blend, coor, tool, relativeBlend)
                 .ConfigureAwait(false).GetAwaiter().GetResult();
             var options = GetWait(wait);
-            WaitUntilSettledByCri(
-                BuildMoveTargetReachedPredicate(instructions, options),
-                "movCircle",
-                options);
+            WaitUntilSettledByCri("movCircle", options);
             return true;
         }
 
@@ -1808,10 +1781,11 @@ namespace Codroid
             }
         }
 
-        private void WaitUntilSettledByCri(
-            Func<CriRealTimeData, bool> targetReached,
-            string opName,
-            MotionWaitOptions options)
+        /// <summary>
+        /// 轮询 CRI，直到曾检测到 <c>InMotion</c> 且连续 <see cref="MotionWaitOptions.SettledSamples"/> 次为停止。
+        /// 不比对关节角或 TCP 位姿与目标点的误差。
+        /// </summary>
+        private void WaitUntilSettledByCri(string opName, MotionWaitOptions options)
         {
             if (options.SettledSamples <= 0)
             {
@@ -1829,7 +1803,6 @@ namespace Codroid
             {
                 EnsureCriFresh(options, opName);
                 var snapshot = CriData;
-                bool reached = targetReached(snapshot);
 
                 if (snapshot.InMotion)
                 {
@@ -1843,13 +1816,7 @@ namespace Codroid
                         $"EmergencyStopPressed={snapshot.EmergencyStopPressed}, HasAlarm={snapshot.HasAlarm}）。");
                 }
 
-                if (hadMotion && !snapshot.InMotion && !reached)
-                {
-                    throw new InvalidOperationException($"{opName} 失败：运动已停止，但未到达目标点。");
-                }
-
-                bool still = !snapshot.InMotion;
-                if (reached && still)
+                if (hadMotion && !snapshot.InMotion)
                 {
                     settled++;
                     if (settled >= options.SettledSamples)
@@ -1857,7 +1824,7 @@ namespace Codroid
                         return;
                     }
                 }
-                else
+                else if (snapshot.InMotion)
                 {
                     settled = 0;
                 }
@@ -1868,96 +1835,7 @@ namespace Codroid
             var tail = CriData;
             throw new TimeoutException(
                 $"{opName} 等待完成超时（{options.Timeout.TotalSeconds:F1}s）。最后状态: InMotion={tail.InMotion}, " +
-                $"jp=[{string.Join(", ", tail.JointPosition.Select(v => v.ToString("F3")))}]");
-        }
-
-        private Func<CriRealTimeData, bool> BuildMoveTargetReachedPredicate(
-            IReadOnlyList<MoveInstruction> instructions,
-            MotionWaitOptions options)
-        {
-            Polyfills.ThrowIfNull(instructions);
-            if (instructions.Count == 0)
-            {
-                throw new ArgumentException("至少提供一条运动指令。", nameof(instructions));
-            }
-
-            var last = MotionPointPacker.PackInstruction(instructions[instructions.Count - 1]);
-            if (last.TargetPoint.Jp is { Length: >= 6 } jp)
-            {
-                return current => MaxAbsDiff(current.JointPosition, jp) <= options.JointToleranceDeg;
-            }
-
-            if (last.TargetPoint.Cp is { Length: >= 6 } cp)
-            {
-                return current => IsCartesianTargetReached(current.TcpPose, cp, options);
-            }
-
-            return _ => true;
-        }
-
-        private static bool IsCartesianTargetReached(
-            double[] actualPose,
-            double[] targetPose,
-            MotionWaitOptions options)
-        {
-            double posErr = Euclidean3Mm(actualPose, targetPose);
-            double oriErr = MaxAbsEulerDiffDeg(actualPose, targetPose);
-            return posErr <= options.CartesianPositionToleranceMm
-                   && oriErr <= options.CartesianOrientationToleranceDeg;
-        }
-
-        private static double MaxAbsDiff(double[] actual, double[] expected)
-        {
-            if (actual.Length < 6 || expected.Length < 6)
-            {
-                return double.PositiveInfinity;
-            }
-
-            double max = 0;
-            for (int i = 0; i < 6; i++)
-            {
-                double d = Math.Abs(actual[i] - expected[i]);
-                if (d > max)
-                {
-                    max = d;
-                }
-            }
-
-            return max;
-        }
-
-        private static double Euclidean3Mm(double[] actualPose, double[] targetPose)
-        {
-            if (actualPose.Length < 3 || targetPose.Length < 3)
-            {
-                return double.PositiveInfinity;
-            }
-
-            double dx = actualPose[0] - targetPose[0];
-            double dy = actualPose[1] - targetPose[1];
-            double dz = actualPose[2] - targetPose[2];
-            return Math.Sqrt(dx * dx + dy * dy + dz * dz);
-        }
-
-        private static double MaxAbsEulerDiffDeg(double[] actualPose, double[] targetPose)
-        {
-            if (actualPose.Length < 6 || targetPose.Length < 6)
-            {
-                return double.PositiveInfinity;
-            }
-
-            double max = 0;
-            for (int i = 3; i < 6; i++)
-            {
-                double d = (actualPose[i] - targetPose[i]) % 360;
-                d = Math.Min(Math.Abs(d), 360 - Math.Abs(d));
-                if (d > max)
-                {
-                    max = d;
-                }
-            }
-
-            return max;
+                $"HadMotion={hadMotion}, jp=[{string.Join(", ", tail.JointPosition.Select(v => v.ToString("F3")))}]");
         }
 
         /// <summary>
