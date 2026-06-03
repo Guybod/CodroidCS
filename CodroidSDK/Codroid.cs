@@ -853,6 +853,72 @@ namespace Codroid
         }
 
         /// <summary>
+        /// 笛卡尔坐标系/工具系换算（指令：<c>Robot/cpostocpos</c>），返回 <see cref="CartesianPoint"/>。
+        /// </summary>
+        /// <param name="cp">源点位，<see cref="CartesianPoint.Cp"/> 为 [x,y,z,rx,ry,rz]，单位 mm、度。</param>
+        /// <param name="coor1">源用户坐标系位姿 [x,y,z,rx,ry,rz]，单位 mm、度。</param>
+        /// <param name="tool1">源工具坐标系位姿 [x,y,z,rx,ry,rz]，单位 mm、度。</param>
+        /// <param name="coor2">目标用户坐标系位姿 [x,y,z,rx,ry,rz]，单位 mm、度。</param>
+        /// <param name="tool2">目标工具坐标系位姿 [x,y,z,rx,ry,rz]，单位 mm、度。</param>
+        /// <returns>换算后的 TCP 位姿。</returns>
+        /// <exception cref="ArgumentNullException">任一参数为 null。</exception>
+        /// <exception cref="ArgumentException">位姿向量长度不是 6。</exception>
+        /// <exception cref="InvalidOperationException"><c>db</c> 无法解析为 6 维数组。</exception>
+        /// <exception cref="TimeoutException">等待响应超时。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错。</exception>
+        public async Task<CartesianPoint> CposToCposPose(
+            CartesianPoint cp,
+            double[] coor1,
+            double[] tool1,
+            double[] coor2,
+            double[] tool2)
+        {
+            var pose = await CposToCposDouble(cp, coor1, tool1, coor2, tool2);
+            return CartesianPoint.MmDeg(pose);
+        }
+
+        /// <summary>
+        /// 笛卡尔坐标系/工具系换算（指令：<c>Robot/cpostocpos</c>），返回六维位姿数组。
+        /// </summary>
+        /// <param name="cp">源点位，<see cref="CartesianPoint.Cp"/> 为 [x,y,z,rx,ry,rz]，单位 mm、度。</param>
+        /// <param name="coor1">源用户坐标系位姿 [x,y,z,rx,ry,rz]，单位 mm、度。</param>
+        /// <param name="tool1">源工具坐标系位姿 [x,y,z,rx,ry,rz]，单位 mm、度。</param>
+        /// <param name="coor2">目标用户坐标系位姿 [x,y,z,rx,ry,rz]，单位 mm、度。</param>
+        /// <param name="tool2">目标工具坐标系位姿 [x,y,z,rx,ry,rz]，单位 mm、度。</param>
+        /// <returns>换算后的 [x,y,z,rx,ry,rz]，单位 mm、度。</returns>
+        /// <exception cref="ArgumentNullException">任一参数为 null。</exception>
+        /// <exception cref="ArgumentException">位姿向量长度不是 6。</exception>
+        /// <exception cref="InvalidOperationException"><c>db</c> 无法解析为 6 维数组。</exception>
+        /// <exception cref="TimeoutException">等待响应超时。</exception>
+        /// <exception cref="CodroidCommandException">控制器报错。</exception>
+        public async Task<double[]> CposToCposDouble(
+            CartesianPoint cp,
+            double[] coor1,
+            double[] tool1,
+            double[] coor2,
+            double[] tool2)
+        {
+            Polyfills.ThrowIfNull(cp);
+            RobotKinematics.RequireVector6(nameof(cp.Cp), cp.Cp);
+            RobotKinematics.RequireVector6(nameof(coor1), coor1);
+            RobotKinematics.RequireVector6(nameof(tool1), tool1);
+            RobotKinematics.RequireVector6(nameof(coor2), coor2);
+            RobotKinematics.RequireVector6(nameof(tool2), tool2);
+
+            int currentId = NextId();
+            var db = new
+            {
+                cp = cp.Cp,
+                coor1,
+                tool1,
+                coor2,
+                tool2
+            };
+            var resp = await _TcpClient.SendCommand(currentId, "Robot/cpostocpos", db);
+            return RobotKinematics.ParseDbAsVector6(resp.db);
+        }
+
+        /// <summary>
         /// 笛卡尔相对位姿/偏移计算（指令：<c>Robot/calculateRelativePose</c>）。
         /// </summary>
         /// <param name="tcpPoseWorld">当前末端 TCP 在世界系下的位姿 [x,y,z,a,b,c]，毫米与度。</param>

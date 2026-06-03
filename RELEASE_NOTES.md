@@ -1,5 +1,16 @@
 # Codroid C# SDK 版本说明
 
+## v2.1.7a（2026-06-03）
+
+### 新增
+
+- **笛卡尔坐标系/工具系换算**（指令 `Robot/cpostocpos`）：
+  - `CposToCposPose`：返回 `CartesianPoint`
+  - `CposToCposDouble`：返回 `double[6]`（mm + 度）
+  - 参数：`CartesianPoint cp` 与四个必填 `double[]`（`coor1`、`tool1`、`coor2`、`tool2`），将源坐标系/工具系下的点位换算到目标坐标系/工具系下
+
+---
+
 ## v2.1.7（2026-05-30）
 
 ### 改进

@@ -79,6 +79,7 @@ SDK 公共函数名不加 `Async` 后缀，即使返回类型是 `Task` / `Task<
 - `SetRegisterValue(...)`
 - `MovJ(...)` / `MovL(...)` / `MovC(...)` / `MovCircle(...)` / `Move(...)`
 - `GetRobotParameters` / `SetDefaultToolId` / `SetToolFrame` / …（机器人设置 19.x）
+- `CposToCposPose` / `CposToCposDouble`（笛卡尔坐标系/工具系换算）
 - `StartCriControl(...)`
 - `CriRealtimeDispatcher.SendTrajectory(...)`
 
@@ -172,6 +173,28 @@ var wait = new MotionWaitOptions
 robot.MovJSync(JointPoint.Degrees(new[] { 0, 0, 90, 0, 90, 0 }), 40, 100, wait);
 robot.MovJSync(CartesianPoint.MmDegWithRef(pose, robot.CriData.JointPosition), 40, 100, wait);
 ```
+
+## 运动学换算
+
+正逆解与坐标系换算（指令 `Robot/apostocpos`、`Robot/cpostoapos`、`Robot/cpostocpos`）：
+
+```csharp
+var cp = CartesianPoint.MmDeg([494, 191, 444, -180, 0, -90]);
+var coor1 = new[] { 0.0, 0, 10, 0, 0, 0 };
+var tool1 = new[] { 0.0, 0, 10, 0, 0, 0 };
+var coor2 = new[] { 0.0, 0, 10, 0, 0, 0 };
+var tool2 = new[] { 0.0, 0, 10, 0, 0, 0 };
+
+// 将 coor1/tool1 下的 cp 换算到 coor2/tool2 下
+CartesianPoint converted = await robot.CposToCposPose(cp, coor1, tool1, coor2, tool2);
+double[] arr = await robot.CposToCposDouble(cp, coor1, tool1, coor2, tool2);
+
+// 正解 / 逆解
+double[] pose = await robot.AposToCposPose(joints, userFrame, toolFrame);
+double[] joints = await robot.CposToAposJoints(pose, refJoints);
+```
+
+`CposToCposPose` / `CposToCposDouble` 的 `cp` 为 `CartesianPoint`，`coor1`/`tool1`/`coor2`/`tool2` 均为长度 6 的 `double[]`（mm + 度），五个参数均必填。
 
 ## CRI 实时数据与实时控制
 
