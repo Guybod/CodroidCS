@@ -1,5 +1,18 @@
 # Codroid C# SDK 版本说明
 
+## v2.1.8（2026-06-03）
+
+### 新增
+
+- **`CposToCposPose` / `CposToCposDouble`**（`Robot/cpostocpos`）：笛卡尔坐标系/工具系换算；`cp` 为 `CartesianPoint`，`coor1`/`tool1`/`coor2`/`tool2` 为必填 `double[6]`
+
+### 变更
+
+- **`*Sync` 阻塞运动完成判定**：仅依据 CRI `InMotion`（曾运动 + 连续 `SettledSamples` 次停稳），**不再**比对关节角或 TCP 与目标点误差；移除「运动已停止，但未到达目标点」异常
+- **`MotionWaitOptions` 容差属性**（`JointToleranceDeg`、`CartesianPositionToleranceMm`、`CartesianOrientationToleranceDeg`）标记 `[Obsolete]`，不再生效
+
+---
+
 ## v2.1.7（2026-05-30）
 
 ### 改进
