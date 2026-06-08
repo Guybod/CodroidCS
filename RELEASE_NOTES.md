@@ -1,5 +1,13 @@
 # Codroid C# SDK 版本说明
 
+## v2.1.10（2026-06-03）
+
+### Breaking Change
+
+- **`MotionWaitOptions` 容差属性彻底移除**：`JointToleranceDeg`、`CartesianPositionToleranceMm`、`CartesianOrientationToleranceDeg` 已删除，旧代码引用会编译报错
+
+---
+
 ## v2.1.8（2026-06-03）
 
 ### 新增

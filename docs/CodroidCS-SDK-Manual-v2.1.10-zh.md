@@ -1,6 +1,6 @@
 # CodroidCS SDK 手册
 
-**版本:** 2.1.8 | **命名空间:** `Codroid`
+**版本:** 2.1.10 | **命名空间:** `Codroid`
 
 ---
 
@@ -2282,7 +2282,7 @@ else if (instruction.Type == MoveKinds.MovL)
 
 `MotionWaitOptions` 控制等待机器人运动完成时的轮询行为和超时时间。
 
-> **v2.1.8 变更**：完成判定仅依据 CRI `InMotion` 标志，不再比对目标位置。容差属性已废弃。
+> **v2.1.10 变更**：完成判定仅依据 CRI `InMotion` 标志，不再比对目标位置。容差属性已废弃。
 
 #### 属性
 

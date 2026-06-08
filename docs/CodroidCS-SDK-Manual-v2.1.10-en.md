@@ -1,6 +1,6 @@
 # CodroidCS SDK Manual
 
-**Version:** 2.1.8 | **Namespace:** `Codroid`
+**Version:** 2.1.10 | **Namespace:** `Codroid`
 
 ---
 
@@ -2251,7 +2251,7 @@ else if (instruction.Type == MoveKinds.MovL)
 
 `MotionWaitOptions` controls the polling behavior and timeout when waiting for a robot motion to complete.
 
-> **v2.1.8 change:** Completion is determined solely by the CRI `InMotion` flag. Tolerance properties are obsolete.
+> **v2.1.10 change:** Completion is determined solely by the CRI `InMotion` flag. Tolerance properties are obsolete.
 
 ### Properties
 
