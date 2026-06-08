@@ -118,18 +118,6 @@ namespace Codroid
 
         /// <summary><c>InMotion=false</c> 连续稳定样本数（默认 3）。</summary>
         public int SettledSamples { get; init; } = 3;
-
-        /// <summary>已弃用：<c>*Sync</c> 不再比对关节误差，保留仅为兼容旧代码。</summary>
-        [Obsolete("*Sync 到位判定仅使用 CRI InMotion，本属性已不再生效。")]
-        public double JointToleranceDeg { get; init; } = 0.2;
-
-        /// <summary>已弃用：<c>*Sync</c> 不再比对笛卡尔位置误差，保留仅为兼容旧代码。</summary>
-        [Obsolete("*Sync 到位判定仅使用 CRI InMotion，本属性已不再生效。")]
-        public double CartesianPositionToleranceMm { get; init; } = 1.0;
-
-        /// <summary>已弃用：<c>*Sync</c> 不再比对笛卡尔姿态误差，保留仅为兼容旧代码。</summary>
-        [Obsolete("*Sync 到位判定仅使用 CRI InMotion，本属性已不再生效。")]
-        public double CartesianOrientationToleranceDeg { get; init; } = 1.0;
     }
 
     /// <summary>
