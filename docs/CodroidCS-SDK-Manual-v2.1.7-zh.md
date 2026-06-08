@@ -3156,6 +3156,32 @@ var trajectory = TrajectoryGenerator.Generate(start, target, request).ToList();
 Console.WriteLine($"生成了 {trajectory.Count} 个轨迹点");
 ```
 
+#### GenerateMultiSegment
+
+多段轨迹拼接：依次连接相邻路点，跳过后续段首点避免端点重复，时间戳累加。
+
+```csharp
+var waypoints = new[]
+{
+    new[] { 0.0, 0, 0, 0, 0, 0 },
+    new[] { 0.0, 0, 90, 0, 90, 0 },
+    new[] { 0.0, 0, 0, 0, 0, 0 },
+};
+var trajectory = TrajectoryGenerator.GenerateMultiSegment(waypoints, request);
+Console.WriteLine($"多段轨迹: {trajectory.Count} 个点, 总时长 {trajectory[^1].TimeSeconds:F3}s");
+```
+
+```csharp
+static List<TrajectoryPoint> GenerateMultiSegment(
+    IReadOnlyList<IReadOnlyList<double>> waypoints,
+    TrajectoryRequest request)
+```
+
+| 参数 | 说明 |
+|------|------|
+| `waypoints` | 至少 2 个路点，每个路点 6 维 |
+| `request` | 采样频率、速度/时长、规划方式等 |
+
 ---
 
 ### 3. TrajectoryRequest
@@ -4093,6 +4119,33 @@ Task<double[]> CalculateRelativePoseResult(
     double[]? tcpPoseInPosCoorFrame = null,
     double[]? userCoorFrame = null)
 ```
+
+---
+
+#### CposToCposPose / CposToCposDouble
+
+坐标系转换：将 TCP 位姿从坐标系1+工具1 转换到坐标系2+工具2。协议 `Robot/cpostocpos`。
+
+```csharp
+var cp = CartesianPoint.MmDeg(new[] { 400.0, 200, 500, 180, 0, 90 });
+var coor1 = new[] { 0.0, 0, 0, 0, 0, 0 };
+var tool1 = new[] { 0.0, 0, 0, 0, 0, 0 };
+var coor2 = new[] { 100.0, 0, 0, 0, 0, 0 };
+var tool2 = new[] { 0.0, 0, 100, 0, 0, 0 };
+
+// 返回 CartesianPoint
+CartesianPoint result = await robot.CposToCposPose(cp, coor1, tool1, coor2, tool2);
+
+// 返回 double[]
+double[] arr = await robot.CposToCposDouble(cp, coor1, tool1, coor2, tool2);
+```
+
+```csharp
+Task<CartesianPoint> CposToCposPose(CartesianPoint cp, double[] coor1, double[] tool1, double[] coor2, double[] tool2)
+Task<double[]> CposToCposDouble(CartesianPoint cp, double[] coor1, double[] tool1, double[] coor2, double[] tool2)
+```
+
+所有向量必须恰好 6 个元素。
 
 ---
 

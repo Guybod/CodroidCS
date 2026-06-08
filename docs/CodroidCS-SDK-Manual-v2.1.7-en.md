@@ -3178,6 +3178,34 @@ var trajectory = TrajectoryGenerator.Generate(start, target, request).ToList();
 Console.WriteLine($"Generated {trajectory.Count} trajectory points");
 ```
 
+#### GenerateMultiSegment
+
+Multi-segment trajectory concatenation: connects adjacent waypoints in sequence, skipping duplicate first points of subsequent segments, with accumulated timestamps.
+
+```csharp
+var waypoints = new[]
+{
+    new[] { 0.0, 0, 0, 0, 0, 0 },
+    new[] { 0.0, 0, 90, 0, 90, 0 },
+    new[] { 0.0, 0, 0, 0, 0, 0 },
+};
+var trajectory = TrajectoryGenerator.GenerateMultiSegment(waypoints, request);
+Console.WriteLine($"Multi-segment: {trajectory.Count} points, duration {trajectory[^1].TimeSeconds:F3}s");
+```
+
+```csharp
+static List<TrajectoryPoint> GenerateMultiSegment(
+    IReadOnlyList<IReadOnlyList<double>> waypoints,
+    TrajectoryRequest request)
+```
+
+| Parameter | Description |
+|-----------|-------------|
+| `waypoints` | At least 2 waypoints, each 6-dimensional |
+| `request` | Sampling frequency, speed/duration, profile, etc. |
+
+**Returns:** `List<TrajectoryPoint>` -- concatenated trajectory points
+
 ---
 
 ## 3. TrajectoryRequest
@@ -4442,6 +4470,33 @@ Task<double[]> CalculateRelativePoseResult(
 |-------|---------|-------------|
 | `RelativePoseCoorType.User` | 0 | User coordinate frame |
 | `RelativePoseCoorType.Tool` | 1 | Tool coordinate frame |
+
+---
+
+#### CposToCposPose / CposToCposDouble
+
+Coordinate system transformation: convert a TCP pose from coordinate system 1 + tool 1 to coordinate system 2 + tool 2. Protocol `Robot/cpostocpos`.
+
+```csharp
+var cp = CartesianPoint.MmDeg(new[] { 400.0, 200, 500, 180, 0, 90 });
+var coor1 = new[] { 0.0, 0, 0, 0, 0, 0 };
+var tool1 = new[] { 0.0, 0, 0, 0, 0, 0 };
+var coor2 = new[] { 100.0, 0, 0, 0, 0, 0 };
+var tool2 = new[] { 0.0, 0, 100, 0, 0, 0 };
+
+// Returns CartesianPoint
+CartesianPoint result = await robot.CposToCposPose(cp, coor1, tool1, coor2, tool2);
+
+// Returns double[]
+double[] arr = await robot.CposToCposDouble(cp, coor1, tool1, coor2, tool2);
+```
+
+```csharp
+Task<CartesianPoint> CposToCposPose(CartesianPoint cp, double[] coor1, double[] tool1, double[] coor2, double[] tool2)
+Task<double[]> CposToCposDouble(CartesianPoint cp, double[] coor1, double[] tool1, double[] coor2, double[] tool2)
+```
+
+All vectors must be exactly 6 elements.
 
 ---
 

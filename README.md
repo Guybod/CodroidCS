@@ -215,6 +215,10 @@ var request = new TrajectoryRequest
 
 var trajectory = TrajectoryGenerator.Generate(start, target, request).ToList();
 
+// 多段轨迹拼接（v2.1.8+）
+var waypoints = new[] { start, target, new[] { 0.0, 0, 90, 0, 90, 0 } };
+var multiTraj = TrajectoryGenerator.GenerateMultiSegment(waypoints, request);
+
 await robot.StartCriControl(filterType: 1, durationMs: 4, startBuffer: 5);
 try
 {
