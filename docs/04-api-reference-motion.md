@@ -397,9 +397,6 @@ else if (instruction.Type == MoveKinds.MovL)
 | `PollInterval` | `TimeSpan` | 50 ms | Interval between each poll to check motion status / 检查运动状态的轮询间隔 |
 | `CriStaleTimeout` | `TimeSpan` | 500 ms | Maximum age of CRI data before considered stale / CRI 数据被视为过期的最长时间 |
 | `SettledSamples` | `int` | 3 | Number of consecutive settled samples required to confirm motion is complete / 确认运动完成所需的连续稳定采样数 |
-| `JointToleranceDeg` | `double` | 0.2 | Joint position tolerance in degrees / 关节位置容差（度） |
-| `CartesianPositionToleranceMm` | `double` | 1.0 | Cartesian position tolerance in millimeters / 笛卡尔位置容差（毫米） |
-| `CartesianOrientationToleranceDeg` | `double` | 1.0 | Cartesian orientation tolerance in degrees / 笛卡尔姿态容差（度） |
 
 ### Example / 示例
 
@@ -415,9 +412,6 @@ var preciseWait = new MotionWaitOptions
     Timeout = TimeSpan.FromSeconds(120),
     PollInterval = TimeSpan.FromMilliseconds(20),
     SettledSamples = 5,
-    JointToleranceDeg = 0.05,
-    CartesianPositionToleranceMm = 0.2,
-    CartesianOrientationToleranceDeg = 0.5,
 };
 
 await robot.Move(MoveInstruction.MovL(cp, speed: 50, acc: 200), preciseWait);
@@ -510,7 +504,6 @@ robot.MovLSync(CartesianPoint.MmDeg([400, 200, 500, 180, 0, 90]), speed: 150, ac
 var opts = new MotionWaitOptions
 {
     Timeout = TimeSpan.FromSeconds(30),
-    JointToleranceDeg = 0.5,
     SettledSamples = 2,
 };
 robot.MovJSync(target, speed: 40, acc: 100, wait: opts);
@@ -725,7 +718,6 @@ var waitOptions = new MotionWaitOptions
 {
     Timeout = TimeSpan.FromSeconds(90),
     SettledSamples = 4,
-    JointToleranceDeg = 0.1,
 };
 
 await robot.Move(path, waitOptions);

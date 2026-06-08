@@ -774,7 +774,6 @@ await robot.Move(new[]
 
 **必须先调用** `StartCriDataPush`。
 
-> **v2.1.8 行为变更**：完成判定仅依据 CRI `InMotion` 标志（曾经运动 + 连续 `SettledSamples` 次停稳），**不再**比对关节角或 TCP 与目标点误差。`MotionWaitOptions` 的容差属性（`JointToleranceDeg`、`CartesianPositionToleranceMm`、`CartesianOrientationToleranceDeg`）已标记 `[Obsolete]`，不再生效。
 
 #### MovJSync
 
@@ -850,8 +849,6 @@ robot.MovLSync(
     wait: new MotionWaitOptions
     {
         Timeout = TimeSpan.FromSeconds(60),
-        CartesianPositionToleranceMm = 2.0,
-        CartesianOrientationToleranceDeg = 1.5
     });
 ```
 
@@ -2295,9 +2292,6 @@ else if (instruction.Type == MoveKinds.MovL)
 | `PollInterval` | `TimeSpan` | 50 ms | 检查运动状态的轮询间隔 |
 | `CriStaleTimeout` | `TimeSpan` | 500 ms | CRI 数据被视为过期的最长时间 |
 | `SettledSamples` | `int` | 3 | 确认运动完成所需的连续稳定采样数 |
-| `JointToleranceDeg` | `double` | 0.2 | ⚠️ `[Obsolete]` 不再生效 |
-| `CartesianPositionToleranceMm` | `double` | 1.0 | ⚠️ `[Obsolete]` 不再生效 |
-| `CartesianOrientationToleranceDeg` | `double` | 1.0 | ⚠️ `[Obsolete]` 不再生效 |
 
 #### 示例
 
@@ -2311,9 +2305,6 @@ var preciseWait = new MotionWaitOptions
     Timeout = TimeSpan.FromSeconds(120),
     PollInterval = TimeSpan.FromMilliseconds(20),
     SettledSamples = 5,
-    JointToleranceDeg = 0.05,
-    CartesianPositionToleranceMm = 0.2,
-    CartesianOrientationToleranceDeg = 0.5,
 };
 
 await robot.Move(MoveInstruction.MovL(cp, speed: 50, acc: 200), preciseWait);
@@ -2488,7 +2479,6 @@ var waitOptions = new MotionWaitOptions
 {
     Timeout = TimeSpan.FromSeconds(90),
     SettledSamples = 4,
-    JointToleranceDeg = 0.1,
 };
 
 await robot.Move(path, waitOptions);

@@ -411,7 +411,6 @@ public bool MovJSync(CartesianPoint target, double speed, double acc,
 var wait = new MotionWaitOptions
 {
     Timeout = TimeSpan.FromSeconds(90),
-    JointToleranceDeg = 0.3
 };
 
 robot.MovJSync(JointPoint.Degrees(new[] { 0, 0, 90, 0, 90, 0 }), 40, 100, wait);
@@ -449,8 +448,6 @@ robot.MovLSync(
     wait: new MotionWaitOptions
     {
         Timeout = TimeSpan.FromSeconds(60),
-        CartesianPositionToleranceMm = 2.0,
-        CartesianOrientationToleranceDeg = 1.5
     });
 ```
 

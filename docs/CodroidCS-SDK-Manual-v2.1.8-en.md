@@ -772,7 +772,6 @@ await robot.Move(new[]
 
 **Prerequisite:** `StartCriDataPush` must be active.
 
-> **v2.1.8 behavior change:** Completion is determined solely by the CRI `InMotion` flag (was moving + consecutive `SettledSamples` stable reads). Joint/TCP position vs target is **no longer checked**. `MotionWaitOptions` tolerance properties (`JointToleranceDeg`, `CartesianPositionToleranceMm`, `CartesianOrientationToleranceDeg`) are `[Obsolete]` and have no effect.
 
 ### MovJSync
 
@@ -848,8 +847,6 @@ robot.MovLSync(
     wait: new MotionWaitOptions
     {
         Timeout = TimeSpan.FromSeconds(60),
-        CartesianPositionToleranceMm = 2.0,
-        CartesianOrientationToleranceDeg = 1.5
     });
 ```
 
@@ -2264,9 +2261,6 @@ else if (instruction.Type == MoveKinds.MovL)
 | `PollInterval` | `TimeSpan` | 50 ms | Interval between each poll to check motion status |
 | `CriStaleTimeout` | `TimeSpan` | 500 ms | Maximum age of CRI data before considered stale |
 | `SettledSamples` | `int` | 3 | Number of consecutive settled samples required to confirm motion is complete |
-| `JointToleranceDeg` | `double` | 0.2 | ⚠️ `[Obsolete]` — no longer effective |
-| `CartesianPositionToleranceMm` | `double` | 1.0 | ⚠️ `[Obsolete]` — no longer effective |
-| `CartesianOrientationToleranceDeg` | `double` | 1.0 | ⚠️ `[Obsolete]` — no longer effective |
 
 ### Example
 
@@ -2280,9 +2274,6 @@ var preciseWait = new MotionWaitOptions
     Timeout = TimeSpan.FromSeconds(120),
     PollInterval = TimeSpan.FromMilliseconds(20),
     SettledSamples = 5,
-    JointToleranceDeg = 0.05,
-    CartesianPositionToleranceMm = 0.2,
-    CartesianOrientationToleranceDeg = 0.5,
 };
 
 await robot.Move(MoveInstruction.MovL(cp, speed: 50, acc: 200), preciseWait);
@@ -2457,7 +2448,6 @@ var waitOptions = new MotionWaitOptions
 {
     Timeout = TimeSpan.FromSeconds(90),
     SettledSamples = 4,
-    JointToleranceDeg = 0.1,
 };
 
 await robot.Move(path, waitOptions);
