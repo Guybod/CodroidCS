@@ -1,6 +1,6 @@
 # CodroidCS SDK 手册
 
-**版本:** 2.1.7 | **命名空间:** `Codroid`
+**版本:** 2.1.8 | **命名空间:** `Codroid`
 
 ---
 
@@ -770,9 +770,11 @@ await robot.Move(new[]
 
 ### 4. 阻塞运动指令
 
-`*Sync` 方法发送运动指令后**阻塞直到 CRI 确认机器人到达目标**。成功返回 `true`，错误/超时抛出异常。
+`*Sync` 方法发送运动指令后**阻塞直到 CRI 确认机器人停稳**。成功返回 `true`，错误/超时抛出异常。
 
 **必须先调用** `StartCriDataPush`。
+
+> **v2.1.8 行为变更**：完成判定仅依据 CRI `InMotion` 标志（曾经运动 + 连续 `SettledSamples` 次停稳），**不再**比对关节角或 TCP 与目标点误差。`MotionWaitOptions` 的容差属性（`JointToleranceDeg`、`CartesianPositionToleranceMm`、`CartesianOrientationToleranceDeg`）已标记 `[Obsolete]`，不再生效。
 
 #### MovJSync
 
@@ -791,23 +793,22 @@ public bool MovJSync(CartesianPoint target, double speed, double acc,
 | `target` | `JointPoint` / `CartesianPoint` | — | 目标位置 |
 | `speed` | `double` | — | 速度（deg/s） |
 | `acc` | `double` | — | 加速度 |
-| `wait` | `MotionWaitOptions?` | null | 等待选项（超时、容差等） |
+| `wait` | `MotionWaitOptions?` | null | 等待选项（超时等） |
 | `blend` | `double?` | null | 平滑半径。与 `relativeBlend` 互斥——同时传入时 `relativeBlend` 无效。不传表示无过渡 |
 | `coor` | `double[]?` | null | 用户坐标系。null 时指令中不包含该字段 |
 | `tool` | `double[]?` | null | 工具坐标系。null 时指令中不包含该字段 |
 | `relativeBlend` | `double?` | null | 相对平滑比（0–100）。与 `blend` 互斥——同时传入时此参数无效 |
 
-**返回值：** `bool` — 成功到达目标返回 `true`
+**返回值：** `bool` — 机器人停稳返回 `true`
 
 **异常：**
 - `TimeoutException` — 运动超时（由 `MotionWaitOptions.Timeout` 控制）
-- `InvalidOperationException` — 机器人处于异常状态（碰撞、急停、报警）或运动停止但未到达目标
+- `InvalidOperationException` — 机器人处于异常状态（碰撞、急停、报警）
 
 ```csharp
 var wait = new MotionWaitOptions
 {
     Timeout = TimeSpan.FromSeconds(90),
-    JointToleranceDeg = 0.3
 };
 
 robot.MovJSync(JointPoint.Degrees(new[] { 0, 0, 90, 0, 90, 0 }), 40, 100, wait);
@@ -2282,7 +2283,9 @@ else if (instruction.Type == MoveKinds.MovL)
 
 一个密封类，配置 SDK 等待运动完成的方式。
 
-`MotionWaitOptions` 控制等待机器人运动完成时的轮询行为、容差阈值和超时时间。您可以自定义这些参数以适应不同的精度和响应要求。
+`MotionWaitOptions` 控制等待机器人运动完成时的轮询行为和超时时间。
+
+> **v2.1.8 变更**：完成判定仅依据 CRI `InMotion` 标志，不再比对目标位置。容差属性已废弃。
 
 #### 属性
 
@@ -2292,9 +2295,9 @@ else if (instruction.Type == MoveKinds.MovL)
 | `PollInterval` | `TimeSpan` | 50 ms | 检查运动状态的轮询间隔 |
 | `CriStaleTimeout` | `TimeSpan` | 500 ms | CRI 数据被视为过期的最长时间 |
 | `SettledSamples` | `int` | 3 | 确认运动完成所需的连续稳定采样数 |
-| `JointToleranceDeg` | `double` | 0.2 | 关节位置容差（度） |
-| `CartesianPositionToleranceMm` | `double` | 1.0 | 笛卡尔位置容差（毫米） |
-| `CartesianOrientationToleranceDeg` | `double` | 1.0 | 笛卡尔姿态容差（度） |
+| `JointToleranceDeg` | `double` | 0.2 | ⚠️ `[Obsolete]` 不再生效 |
+| `CartesianPositionToleranceMm` | `double` | 1.0 | ⚠️ `[Obsolete]` 不再生效 |
+| `CartesianOrientationToleranceDeg` | `double` | 1.0 | ⚠️ `[Obsolete]` 不再生效 |
 
 #### 示例
 

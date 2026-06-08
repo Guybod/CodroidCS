@@ -1,6 +1,6 @@
 # CodroidCS SDK Manual
 
-**Version:** 2.1.7 | **Namespace:** `Codroid`
+**Version:** 2.1.8 | **Namespace:** `Codroid`
 
 ---
 
@@ -768,9 +768,11 @@ await robot.Move(new[]
 
 ## 4. Blocking Motion Commands
 
-`*Sync` methods send the motion command, then **block until CRI confirms the robot has reached the target**. They return `true` on success, or throw on error/timeout.
+`*Sync` methods send the motion command, then **block until CRI confirms the robot has stopped**. They return `true` on success, or throw on error/timeout.
 
 **Prerequisite:** `StartCriDataPush` must be active.
+
+> **v2.1.8 behavior change:** Completion is determined solely by the CRI `InMotion` flag (was moving + consecutive `SettledSamples` stable reads). Joint/TCP position vs target is **no longer checked**. `MotionWaitOptions` tolerance properties (`JointToleranceDeg`, `CartesianPositionToleranceMm`, `CartesianOrientationToleranceDeg`) are `[Obsolete]` and have no effect.
 
 ### MovJSync
 
@@ -789,23 +791,22 @@ public bool MovJSync(CartesianPoint target, double speed, double acc,
 | `target` | `JointPoint` / `CartesianPoint` | — | Target position |
 | `speed` | `double` | — | Speed (deg/s) |
 | `acc` | `double` | — | Acceleration |
-| `wait` | `MotionWaitOptions?` | null | Wait options (timeout, tolerance, etc.) |
+| `wait` | `MotionWaitOptions?` | null | Wait options (timeout, etc.) |
 | `blend` | `double?` | null | Blend radius. Mutually exclusive with `relativeBlend` — if both set, `relativeBlend` is ignored. Omit for no transition |
 | `coor` | `double[]?` | null | User coordinate frame. `null` = omitted from command |
 | `tool` | `double[]?` | null | Tool coordinate frame. `null` = omitted from command |
 | `relativeBlend` | `double?` | null | Relative blend ratio (0–100). Mutually exclusive with `blend` — if both set, this is ignored |
 
-**Returns:** `bool` — `true` when target is reached
+**Returns:** `bool` — `true` when robot stops
 
 **Throws:**
 - `TimeoutException` — motion timed out (controlled by `MotionWaitOptions.Timeout`)
-- `InvalidOperationException` — robot in abnormal state (collision, E-stop, alarm) or stopped without reaching target
+- `InvalidOperationException` — robot in abnormal state (collision, E-stop, alarm)
 
 ```csharp
 var wait = new MotionWaitOptions
 {
     Timeout = TimeSpan.FromSeconds(90),
-    JointToleranceDeg = 0.3
 };
 
 robot.MovJSync(JointPoint.Degrees(new[] { 0, 0, 90, 0, 90, 0 }), 40, 100, wait);
@@ -2251,7 +2252,9 @@ else if (instruction.Type == MoveKinds.MovL)
 
 **A sealed class that configures how the SDK waits for motion completion.**
 
-`MotionWaitOptions` controls the polling behavior, tolerance thresholds, and timeout when waiting for a robot motion to complete. You can customize these parameters to suit different precision and responsiveness requirements.
+`MotionWaitOptions` controls the polling behavior and timeout when waiting for a robot motion to complete.
+
+> **v2.1.8 change:** Completion is determined solely by the CRI `InMotion` flag. Tolerance properties are obsolete.
 
 ### Properties
 
@@ -2261,9 +2264,9 @@ else if (instruction.Type == MoveKinds.MovL)
 | `PollInterval` | `TimeSpan` | 50 ms | Interval between each poll to check motion status |
 | `CriStaleTimeout` | `TimeSpan` | 500 ms | Maximum age of CRI data before considered stale |
 | `SettledSamples` | `int` | 3 | Number of consecutive settled samples required to confirm motion is complete |
-| `JointToleranceDeg` | `double` | 0.2 | Joint position tolerance in degrees |
-| `CartesianPositionToleranceMm` | `double` | 1.0 | Cartesian position tolerance in millimeters |
-| `CartesianOrientationToleranceDeg` | `double` | 1.0 | Cartesian orientation tolerance in degrees |
+| `JointToleranceDeg` | `double` | 0.2 | ⚠️ `[Obsolete]` — no longer effective |
+| `CartesianPositionToleranceMm` | `double` | 1.0 | ⚠️ `[Obsolete]` — no longer effective |
+| `CartesianOrientationToleranceDeg` | `double` | 1.0 | ⚠️ `[Obsolete]` — no longer effective |
 
 ### Example
 
