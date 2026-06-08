@@ -808,9 +808,6 @@ internal static class Program
                 CriStaleTimeout = TimeSpan.FromMilliseconds(700),
                 PollInterval = TimeSpan.FromMilliseconds(50),
                 SettledSamples = 3,
-                JointToleranceDeg = 0.3,
-                CartesianPositionToleranceMm = 2.0,
-                CartesianOrientationToleranceDeg = 1.5
             };
 
             var homeJ = JointPoint.Degrees(new[] { 0.0, 0, 90, 0, 90, 0 });

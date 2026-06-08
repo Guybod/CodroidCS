@@ -54,7 +54,6 @@ public class Program
             var opts = new MotionWaitOptions
             {
                 Timeout = TimeSpan.FromSeconds(30),
-                JointToleranceDeg = 0.5,
                 SettledSamples = 2
             };
             robot.MovJSync(home, speed: 40, acc: 100, wait: opts);
