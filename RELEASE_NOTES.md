@@ -6,10 +6,13 @@
 
 - **`CposToCposPose` / `CposToCposDouble`**（`Robot/cpostocpos`）：笛卡尔坐标系/工具系换算；`cp` 为 `CartesianPoint`，`coor1`/`tool1`/`coor2`/`tool2` 为必填 `double[6]`
 
-### 变更
+### Breaking Change
 
-- **`*Sync` 阻塞运动完成判定**：仅依据 CRI `InMotion`（曾运动 + 连续 `SettledSamples` 次停稳），**不再**比对关节角或 TCP 与目标点误差；移除「运动已停止，但未到达目标点」异常
-- **`MotionWaitOptions` 容差属性**（`JointToleranceDeg`、`CartesianPositionToleranceMm`、`CartesianOrientationToleranceDeg`）标记 `[Obsolete]`，不再生效
+- **`*Sync` 阻塞运动完成判定逻辑简化**：仅依据 CRI `InMotion` 标志（曾运动 + 连续 `SettledSamples` 次停稳），**不再**比对关节角或 TCP 与目标点误差
+  - 碰撞、急停、报警仍会抛 `InvalidOperationException`（这些场景会触发 `has_alarm` / `emergency_stop`）
+  - 外部 `StopRobotMove` 打断视为正常结束
+  - 移除「运动已停止，但未到达目标点」异常
+- **`MotionWaitOptions` 容差属性废弃**：`JointToleranceDeg`、`CartesianPositionToleranceMm`、`CartesianOrientationToleranceDeg` 标记 `[Obsolete]`，不再生效；仅 `Timeout`、`PollInterval`、`CriStaleTimeout`、`SettledSamples` 仍有效
 
 ---
 
