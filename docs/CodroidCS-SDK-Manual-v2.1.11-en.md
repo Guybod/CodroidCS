@@ -1,6 +1,6 @@
 # CodroidCS SDK Manual
 
-**Version:** 2.1.10 | **Namespace:** `Codroid`
+**Version:** 2.1.11 | **Namespace:** `Codroid`
 
 ---
 

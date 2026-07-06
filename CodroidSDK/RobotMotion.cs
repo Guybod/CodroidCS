@@ -118,6 +118,21 @@ namespace Codroid
 
         /// <summary><c>InMotion=false</c> 连续稳定样本数（默认 3）。</summary>
         public int SettledSamples { get; init; } = 3;
+
+        /// <summary>是否启用容差前置判断（默认 false）。启用后，目标在容差范围内直接返回，不等 InMotion。</summary>
+        public bool UseTolerance { get; init; } = false;
+
+        /// <summary>关节容差（度，默认 0.5）。</summary>
+        public double JointToleranceDeg { get; init; } = 0.5;
+
+        /// <summary>笛卡尔位置容差（mm，默认 1.0）。</summary>
+        public double CartesianPositionToleranceMm { get; init; } = 1.0;
+
+        /// <summary>姿态容差（度，默认 1.0）。</summary>
+        public double CartesianOrientationToleranceDeg { get; init; } = 1.0;
+
+        /// <summary>等待 InMotion 变为 true 的超时（默认 1 秒）。超时未启动则报错。</summary>
+        public TimeSpan MotionStartTimeout { get; init; } = TimeSpan.FromSeconds(1);
     }
 
     /// <summary>

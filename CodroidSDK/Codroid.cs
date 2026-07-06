@@ -1443,7 +1443,18 @@ namespace Codroid
         {
             Move(instructions).ConfigureAwait(false).GetAwaiter().GetResult();
             var options = GetWait(wait);
-            WaitUntilSettledByCri("move(path)", options);
+            // 从最后一条指令提取目标用于容差判断
+            double[]? targetJp = null;
+            double[]? targetCp = null;
+            if (instructions.Count > 0)
+            {
+                var last = instructions[instructions.Count - 1];
+                if (last.TargetPoint?.Jp != null && last.TargetPoint.Jp.Length >= 6)
+                    targetJp = last.TargetPoint.Jp;
+                else if (last.TargetPoint?.Cp != null && last.TargetPoint.Cp.Length >= 6)
+                    targetCp = last.TargetPoint.Cp;
+            }
+            WaitUntilSettledByCri("move(path)", options, targetJp: targetJp, targetCp: targetCp);
             return true;
         }
 
@@ -1464,14 +1475,14 @@ namespace Codroid
             MovJ(target, speed, acc, blend, coor, tool, relativeBlend)
                 .ConfigureAwait(false).GetAwaiter().GetResult();
             var options = GetWait(wait);
-            WaitUntilSettledByCri("movJ(JointPoint)", options);
+            WaitUntilSettledByCri("movJ(JointPoint)", options, targetJp: target.Jp);
             return true;
         }
 
         /// <summary>
         /// 阻塞下发单段笛卡尔 <c>movJ</c>，等待 CRI <c>InMotion</c> 停稳后返回 <c>true</c>。
         /// </summary>
-        /// <remarks>须先 <see cref="StartCriDataPush"/>；不比对关节/TCP 位置。</remarks>
+        /// <remarks>须先 <see cref="StartCriDataPush"/>；支持容差前置判断（UseTolerance=True 时）。</remarks>
         public bool MovJSync(
             CartesianPoint target,
             double speed,
@@ -1485,7 +1496,7 @@ namespace Codroid
             MovJ(target, speed, acc, blend, coor, tool, relativeBlend)
                 .ConfigureAwait(false).GetAwaiter().GetResult();
             var options = GetWait(wait);
-            WaitUntilSettledByCri("movJ(CartesianPoint)", options);
+            WaitUntilSettledByCri("movJ(CartesianPoint)", options, targetCp: target.Cp);
             return true;
         }
 
@@ -1506,14 +1517,14 @@ namespace Codroid
             MovL(target, speed, acc, blend, coor, tool, relativeBlend)
                 .ConfigureAwait(false).GetAwaiter().GetResult();
             var options = GetWait(wait);
-            WaitUntilSettledByCri("movL(CartesianPoint)", options);
+            WaitUntilSettledByCri("movL(CartesianPoint)", options, targetCp: target.Cp);
             return true;
         }
 
         /// <summary>
         /// 阻塞下发单段关节 <c>movL</c>，等待 CRI <c>InMotion</c> 停稳后返回 <c>true</c>。
         /// </summary>
-        /// <remarks>须先 <see cref="StartCriDataPush"/>；不比对关节/TCP 位置。</remarks>
+        /// <remarks>须先 <see cref="StartCriDataPush"/>；支持容差前置判断（UseTolerance=True 时）。</remarks>
         public bool MovLSync(
             JointPoint target,
             double speed,
@@ -1527,7 +1538,7 @@ namespace Codroid
             MovL(target, speed, acc, blend, coor, tool, relativeBlend)
                 .ConfigureAwait(false).GetAwaiter().GetResult();
             var options = GetWait(wait);
-            WaitUntilSettledByCri("movL(JointPoint)", options);
+            WaitUntilSettledByCri("movL(JointPoint)", options, targetJp: target.Jp);
             return true;
         }
 
@@ -1549,7 +1560,7 @@ namespace Codroid
             MovC(middle, target, speed, acc, blend, coor, tool, relativeBlend)
                 .ConfigureAwait(false).GetAwaiter().GetResult();
             var options = GetWait(wait);
-            WaitUntilSettledByCri("movC", options);
+            WaitUntilSettledByCri("movC", options, targetCp: target.Cp);
             return true;
         }
 
@@ -1572,7 +1583,7 @@ namespace Codroid
             MovCircle(middle, target, circleNum, speed, acc, blend, coor, tool, relativeBlend)
                 .ConfigureAwait(false).GetAwaiter().GetResult();
             var options = GetWait(wait);
-            WaitUntilSettledByCri("movCircle", options);
+            WaitUntilSettledByCri("movCircle", options, targetCp: target.Cp);
             return true;
         }
 
@@ -1785,7 +1796,7 @@ namespace Codroid
         /// 轮询 CRI，直到曾检测到 <c>InMotion</c> 且连续 <see cref="MotionWaitOptions.SettledSamples"/> 次为停止。
         /// 不比对关节角或 TCP 位姿与目标点的误差。
         /// </summary>
-        private void WaitUntilSettledByCri(string opName, MotionWaitOptions options)
+        private void WaitUntilSettledByCri(string opName, MotionWaitOptions options, double[]? targetJp = null, double[]? targetCp = null)
         {
             if (options.SettledSamples <= 0)
             {
@@ -1796,9 +1807,21 @@ namespace Codroid
                 throw new ArgumentOutOfRangeException(nameof(options), "PollInterval 必须大于 0。");
             }
 
+            // 容差前置判断：如果目标已在容差范围内，直接返回
+            if (options.UseTolerance)
+            {
+                EnsureCriFresh(options, opName);
+                var snapshot = CriData;
+                if (IsTargetReached(snapshot, targetJp, targetCp, options))
+                {
+                    return; // 目标已在容差内，短路返回
+                }
+            }
+
             var sw = Stopwatch.StartNew();
             int settled = 0;
             bool hadMotion = false;
+            bool motionStarted = false;
             while (sw.Elapsed <= options.Timeout)
             {
                 EnsureCriFresh(options, opName);
@@ -1807,6 +1830,7 @@ namespace Codroid
                 if (snapshot.InMotion)
                 {
                     hadMotion = true;
+                    motionStarted = true;
                 }
 
                 if (snapshot.CollisionStopped || snapshot.EmergencyStopPressed || snapshot.HasAlarm)
@@ -1814,6 +1838,15 @@ namespace Codroid
                     throw new InvalidOperationException(
                         $"{opName} 失败：检测到异常状态（CollisionStopped={snapshot.CollisionStopped}, " +
                         $"EmergencyStopPressed={snapshot.EmergencyStopPressed}, HasAlarm={snapshot.HasAlarm}）。");
+                }
+
+                // 启动超时检测：如果 InMotion 在 MotionStartTimeout 内从未变为 true，直接报错
+                if (!motionStarted && sw.Elapsed >= options.MotionStartTimeout)
+                {
+                    throw new InvalidOperationException(
+                        $"{opName} 失败：机器人未启动运动（InMotion 在 {options.MotionStartTimeout.TotalSeconds:F1}s 内从未为 True）。" +
+                        $"目标可能无法到达或控制器未响应。" +
+                        $"最后状态: jp=[{string.Join(", ", snapshot.JointPosition.Select(v => v.ToString("F3")))}]");
                 }
 
                 if (hadMotion && !snapshot.InMotion)
@@ -1832,10 +1865,50 @@ namespace Codroid
                 Thread.Sleep(options.PollInterval);
             }
 
-            var tail = CriData;
+            // 整体超时
+            var tailData = CriData;
             throw new TimeoutException(
-                $"{opName} 等待完成超时（{options.Timeout.TotalSeconds:F1}s）。最后状态: InMotion={tail.InMotion}, " +
-                $"HadMotion={hadMotion}, jp=[{string.Join(", ", tail.JointPosition.Select(v => v.ToString("F3")))}]");
+                $"{opName} 等待完成超时（{options.Timeout.TotalSeconds:F1}s）。最后状态: InMotion={tailData.InMotion}, " +
+                $"HadMotion={hadMotion}, jp=[{string.Join(", ", tailData.JointPosition.Select(v => v.ToString("F3")))}]");
+        }
+
+        /// <summary>检查目标是否在容差范围内。</summary>
+        private bool IsTargetReached(CriRealTimeData snapshot, double[]? targetJp, double[]? targetCp, MotionWaitOptions options)
+        {
+            // 关节目标判断
+            if (targetJp != null && targetJp.Length >= 6 && snapshot.JointPosition.Length >= 6)
+            {
+                double maxDiff = 0;
+                for (int i = 0; i < 6; i++)
+                {
+                    maxDiff = Math.Max(maxDiff, Math.Abs(snapshot.JointPosition[i] - targetJp[i]));
+                }
+                return maxDiff <= options.JointToleranceDeg;
+            }
+
+            // 笛卡尔目标判断
+            if (targetCp != null && targetCp.Length >= 6 && snapshot.TcpPose.Length >= 6)
+            {
+                // 位置误差（欧氏距离，mm）
+                double dx = snapshot.TcpPose[0] - targetCp[0];
+                double dy = snapshot.TcpPose[1] - targetCp[1];
+                double dz = snapshot.TcpPose[2] - targetCp[2];
+                double posErr = Math.Sqrt(dx * dx + dy * dy + dz * dz);
+
+                // 姿态误差（最大角度差，度）
+                double oriErr = 0;
+                for (int i = 3; i < 6; i++)
+                {
+                    double diff = Math.Abs(snapshot.TcpPose[i] - targetCp[i]);
+                    diff = diff % 360;
+                    if (diff > 180) diff = 360 - diff;
+                    oriErr = Math.Max(oriErr, diff);
+                }
+
+                return posErr <= options.CartesianPositionToleranceMm && oriErr <= options.CartesianOrientationToleranceDeg;
+            }
+
+            return false;
         }
 
         /// <summary>
