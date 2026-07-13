@@ -24,6 +24,7 @@ Codroid 机器人控制器的 **C# SDK**：通过 TCP/UDP 与 JSON 协议与控�
 | `CodroidTestNet462/` | 控制台示例程序（net462），面向 .NET Framework 4.6.2+ |
 | `CodroidCRITest/` | CRI 实时控制示例程序，演示轨迹规划与 UDP CommandData 周期下发 |
 | `CodroidCRITestNet462/` | CRI 实时控制示例程序（net462），面向 .NET Framework 4.6.2+ |
+| `examples/ForceControlTest/` | 力控接口测试程序（net462 / net6.0 / net8.0） |
 
 ## 构建 SDK
 
@@ -51,6 +52,25 @@ dotnet run --project CodroidTestNet8/CodroidTestNet8.csproj -- register 192.168.
 ```
 
 更多子命令与说明见 `CodroidTestNet8/Program.cs` 文件顶部注释。
+
+## 力控测试
+
+力控接口测试工程同时面向 **net462**、**net6.0** 与 **net8.0**。Linux / macOS 上运行 `net6.0` 或 `net8.0`；`net462` 仅用于 Windows .NET Framework 4.6.2+。
+
+```bash
+dotnet run --project examples/ForceControlTest/ForceControlTest.csproj -f net8.0 -- 192.168.1.136 state
+dotnet run --project examples/ForceControlTest/ForceControlTest.csproj -f net6.0 -- 192.168.1.136 state
+```
+
+常用模式：
+
+- `state`：读取 `GetForceState()` 与单字段 getter，例如 `GetForceStateEnabled()`
+- `calibration`：执行 `ZeroForceCalibration(calibrationTimeMs)`
+- `safety`：设置过力保护与力数据健康监控
+- `compliance` / `constant`：进入柔顺或恒力模式，测试 `TuneForceParams`
+- `contact --allow-motion`：执行接触检测，涉及运动，必须显式追加 `--allow-motion`
+
+当前 `InitForceControl()` 固定下发导纳算法 `algo=1`，不开放算法参数；旧 `FTSensorDriftCalibration` 已移除。
 
 ## 在自己的项目中引用
 
@@ -239,7 +259,7 @@ CRI UDP 线上单位是 m/rad，SDK 对外统一使用 mm/deg；`CriRealtimeDisp
 从 2.1.2 版本开始，SDK 新增 `.NET Framework 4.6.2+` 目标，适用于 WinForms / WPF / 老 .NET Framework 项目。
 
 ```xml
-<PackageReference Include="Codroidsdk" Version="2.1.8" />
+<PackageReference Include="Codroidsdk" Version="2.1.11" />
 ```
 
 注意事项：

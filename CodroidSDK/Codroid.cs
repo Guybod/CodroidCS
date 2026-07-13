@@ -524,6 +524,237 @@ namespace Codroid
         public Task<CommonResponse> ClearSystemError() => SendCommandEmptyDb("System/clearError");
 
         /// <summary>
+        /// 六维力传感器零力校准 / 带载去皮（指令：<c>Robot/ZeroForceCalibration</c>）。
+        /// </summary>
+        public Task<CommonResponse> ZeroForceCalibration(int calibrationTimeMs = 1000)
+        {
+            return _TcpClient.SendCommand(NextId(), "Robot/ZeroForceCalibration", new { calibrationTimeMs });
+        }
+
+        /// <summary>
+        /// 进入力控前一次性配参。当前 C# SDK 固定下发导纳算法 <c>algo=1</c>，不开放 algo 入参。
+        /// </summary>
+        public Task<CommonResponse> InitForceControl(
+            ForceFrame frame,
+            IReadOnlyList<ForceAxisMode> axisMode,
+            object? compliance = null,
+            object? constantForce = null,
+            double[]? userFrameRpy = null,
+            double[]? desiredWrench = null,
+            object? forceLimit = null)
+        {
+            ValidateLength(axisMode, 6, nameof(axisMode));
+            var db = new Dictionary<string, object?>
+            {
+                ["algo"] = (int)ForceControlAlgo.Admittance,
+                ["frame"] = (int)frame,
+                ["axisMode"] = axisMode.Select(x => (int)x).ToArray()
+            };
+            if (compliance != null) db["compliance"] = compliance;
+            if (constantForce != null) db["constantForce"] = constantForce;
+            if (userFrameRpy != null) db["userFrameRpy"] = userFrameRpy;
+            if (desiredWrench != null) db["desiredWrench"] = desiredWrench;
+            if (forceLimit != null) db["forceLimit"] = forceLimit;
+            return _TcpClient.SendCommand(NextId(), "Robot/initForceControl", db);
+        }
+
+        /// <summary>
+        /// 启动力控（指令：<c>Robot/startForceControl</c>）。
+        /// </summary>
+        public Task<CommonResponse> StartForceControl() =>
+            _TcpClient.SendCommand(NextId(), "Robot/startForceControl", new { });
+
+        /// <summary>
+        /// 平滑停止力控（指令：<c>Robot/stopForceControl</c>）。
+        /// </summary>
+        public Task<CommonResponse> StopForceControl(int smoothTimeMs = 500) =>
+            _TcpClient.SendCommand(NextId(), "Robot/stopForceControl", new { smoothTimeMs });
+
+        /// <summary>
+        /// 在线调整力控参数（指令：<c>Robot/tuneForceParams</c>）。
+        /// </summary>
+        public Task<CommonResponse> TuneForceParams(
+            double[]? stiffness = null,
+            double[]? damping = null,
+            double[]? mass = null,
+            double[]? desiredForce = null,
+            double[]? kp = null,
+            double[]? kd = null,
+            double? rampTime = null)
+        {
+            var db = new Dictionary<string, object?>();
+            if (stiffness != null) db["stiffness"] = stiffness;
+            if (damping != null) db["damping"] = damping;
+            if (mass != null) db["mass"] = mass;
+            if (desiredForce != null) db["desiredForce"] = desiredForce;
+            if (kp != null) db["kp"] = kp;
+            if (kd != null) db["kd"] = kd;
+            if (rampTime != null) db["rampTime"] = rampTime.Value;
+            return _TcpClient.SendCommand(NextId(), "Robot/tuneForceParams", db);
+        }
+
+        /// <summary>
+        /// 启动接触检测（指令：<c>Robot/startContactDetection</c>）。
+        /// </summary>
+        public Task<CommonResponse> StartContactDetection(
+            double[] direction,
+            double? feedVelocity = null,
+            double? contactForceThreshold = null,
+            double? velDropRatio = null,
+            double? maxTravel = null,
+            double? timeoutMs = null)
+        {
+            ValidateLength(direction, 6, nameof(direction));
+            var db = new Dictionary<string, object?> { ["direction"] = direction };
+            if (feedVelocity != null) db["feedVelocity"] = feedVelocity.Value;
+            if (contactForceThreshold != null) db["contactForceThreshold"] = contactForceThreshold.Value;
+            if (velDropRatio != null) db["velDropRatio"] = velDropRatio.Value;
+            if (maxTravel != null) db["maxTravel"] = maxTravel.Value;
+            if (timeoutMs != null) db["timeoutMs"] = timeoutMs.Value;
+            return _TcpClient.SendCommand(NextId(), "Robot/startContactDetection", db);
+        }
+
+        /// <summary>
+        /// 设置过力保护（指令：<c>Robot/setOverforceProtection</c>）。
+        /// </summary>
+        public Task<CommonResponse> SetOverforceProtection(
+            bool? enable = null,
+            double[]? forceThreshold = null,
+            double? holdMs = null)
+        {
+            if (forceThreshold != null) ValidateLength(forceThreshold, 6, nameof(forceThreshold));
+            var db = new Dictionary<string, object?>();
+            if (enable != null) db["enable"] = enable.Value;
+            if (forceThreshold != null) db["forceThreshold"] = forceThreshold;
+            if (holdMs != null) db["holdMs"] = holdMs.Value;
+            return _TcpClient.SendCommand(NextId(), "Robot/setOverforceProtection", db);
+        }
+
+        /// <summary>
+        /// 设置力数据健康监控（指令：<c>Robot/setForceDataHealth</c>）。
+        /// </summary>
+        public Task<CommonResponse> SetForceDataHealth(
+            bool? enable = null,
+            double? timeoutMs = null,
+            double? maxPacketLossRatio = null,
+            int? packetLossWindow = null,
+            double? forceSaturation = null,
+            double? torqueSaturation = null)
+        {
+            var db = new Dictionary<string, object?>();
+            if (enable != null) db["enable"] = enable.Value;
+            if (timeoutMs != null) db["timeoutMs"] = timeoutMs.Value;
+            if (maxPacketLossRatio != null) db["maxPacketLossRatio"] = maxPacketLossRatio.Value;
+            if (packetLossWindow != null) db["packetLossWindow"] = packetLossWindow.Value;
+            if (forceSaturation != null) db["forceSaturation"] = forceSaturation.Value;
+            if (torqueSaturation != null) db["torqueSaturation"] = torqueSaturation.Value;
+            return _TcpClient.SendCommand(NextId(), "Robot/setForceDataHealth", db);
+        }
+
+        /// <summary>
+        /// 读取力控状态快照（指令：<c>Robot/getForceState</c>）。
+        /// </summary>
+        public async Task<ForceControlState> GetForceState()
+        {
+            var response = await _TcpClient.SendCommand(NextId(), "Robot/getForceState", string.Empty)
+                .ConfigureAwait(false);
+            return ParseForceControlState(response.db);
+        }
+
+        /// <summary>读取力控启用状态。</summary>
+        public async Task<bool> GetForceStateEnabled() => (await GetForceState().ConfigureAwait(false)).Enabled;
+        /// <summary>读取力控 pending 状态。</summary>
+        public async Task<bool> GetForceStatePending() => (await GetForceState().ConfigureAwait(false)).Pending;
+        /// <summary>读取力控算法编号。</summary>
+        public async Task<int> GetForceStateAlgo() => (await GetForceState().ConfigureAwait(false)).Algo;
+        /// <summary>读取力数据有效状态。</summary>
+        public async Task<bool> GetForceStateValid() => (await GetForceState().ConfigureAwait(false)).Valid;
+        /// <summary>读取接触检测状态。</summary>
+        public async Task<bool> GetForceStateIsContact() => (await GetForceState().ConfigureAwait(false)).IsContact;
+        /// <summary>读取过力保护触发状态。</summary>
+        public async Task<bool> GetForceStateIsOverforce() => (await GetForceState().ConfigureAwait(false)).IsOverforce;
+        /// <summary>读取力数据健康状态编号。</summary>
+        public async Task<int> GetForceStateHealth() => (await GetForceState().ConfigureAwait(false)).Health;
+        /// <summary>读取 TCP 坐标系下的六维力/力矩。</summary>
+        public async Task<double[]> GetForceStateWrenchTcp() => (await GetForceState().ConfigureAwait(false)).WrenchTcp;
+        /// <summary>读取基坐标系下的六维力/力矩。</summary>
+        public async Task<double[]> GetForceStateWrenchBase() => (await GetForceState().ConfigureAwait(false)).WrenchBase;
+        /// <summary>读取期望六维力/力矩。</summary>
+        public async Task<double[]> GetForceStateDesiredWrench() => (await GetForceState().ConfigureAwait(false)).DesiredWrench;
+        /// <summary>读取力跟踪误差。</summary>
+        public async Task<double[]> GetForceStateTrackError() => (await GetForceState().ConfigureAwait(false)).TrackError;
+        /// <summary>读取六个轴的力控模式。</summary>
+        public async Task<int[]> GetForceStateAxisMode() => (await GetForceState().ConfigureAwait(false)).AxisMode;
+
+        private static ForceControlState ParseForceControlState(JsonElement db)
+        {
+            var state = new ForceControlState();
+            if (db.ValueKind != JsonValueKind.Object)
+            {
+                return state;
+            }
+            state.Enabled = GetBool(db, "enabled");
+            state.Pending = GetBool(db, "pending");
+            state.Algo = GetInt(db, "algo");
+            state.Valid = GetBool(db, "valid");
+            state.IsContact = GetBool(db, "isContact");
+            state.IsOverforce = GetBool(db, "isOverforce");
+            state.Health = GetInt(db, "health");
+            state.WrenchTcp = GetDoubleArray(db, "wrenchTcp");
+            state.WrenchBase = GetDoubleArray(db, "wrenchBase");
+            state.DesiredWrench = GetDoubleArray(db, "desiredWrench");
+            state.TrackError = GetDoubleArray(db, "trackError");
+            state.AxisMode = GetIntArray(db, "axisMode");
+            return state;
+        }
+
+        private static bool GetBool(JsonElement db, string name)
+        {
+            if (!db.TryGetProperty(name, out var value))
+                return false;
+            return value.ValueKind == JsonValueKind.True;
+        }
+
+        private static int GetInt(JsonElement db, string name) =>
+            db.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var n)
+                ? n
+                : 0;
+
+        private static double[] GetDoubleArray(JsonElement db, string name)
+        {
+            if (!db.TryGetProperty(name, out var value) || value.ValueKind != JsonValueKind.Array)
+                return new double[6];
+            var list = new List<double>();
+            foreach (var item in value.EnumerateArray())
+            {
+                list.Add(item.ValueKind == JsonValueKind.Number && item.TryGetDouble(out var v) ? v : 0.0);
+            }
+            while (list.Count < 6) list.Add(0.0);
+            return list.Take(6).ToArray();
+        }
+
+        private static int[] GetIntArray(JsonElement db, string name)
+        {
+            if (!db.TryGetProperty(name, out var value) || value.ValueKind != JsonValueKind.Array)
+                return new int[6];
+            var list = new List<int>();
+            foreach (var item in value.EnumerateArray())
+            {
+                list.Add(item.ValueKind == JsonValueKind.Number && item.TryGetInt32(out var v) ? v : 0);
+            }
+            while (list.Count < 6) list.Add(0);
+            return list.Take(6).ToArray();
+        }
+
+        private static void ValidateLength<T>(IReadOnlyCollection<T> values, int expected, string name)
+        {
+            if (values.Count != expected)
+            {
+                throw new ArgumentException($"{name} 必须包含 {expected} 个元素。", name);
+            }
+        }
+
+        /// <summary>
         /// 发送 <c>db</c> 为空字符串的 JSON 指令（与协议示例一致）。
         /// </summary>
         private Task<CommonResponse> SendCommandEmptyDb(string type) =>
