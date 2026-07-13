@@ -4829,6 +4829,121 @@ On net462, `BinaryPrimitives.WriteDoubleLittleEndian(Span<byte>, double)` is not
 
 ---
 
+## Force Control APIs (v2.1.11+)
+
+The C# SDK force-control surface is aligned with Python and supports `net462`, `net6.0`, and `net8.0`. `InitForceControl` always sends admittance control `algo=1`; callers cannot pass an algorithm parameter. The old `FTSensorDriftCalibration` API has been removed.
+
+### Enums and State Type
+
+```csharp
+public enum ForceControlAlgo { Impedance = 0, Admittance = 1, PdForce = 2 }
+public enum ForceFrame { Tcp = 0, User = 1, World = 2 }
+public enum ForceAxisMode { Position = 0, Force = 1, Compliant = 2 }
+public enum ForceHealth { Ok = 0, Invalid = 1, Timeout = 2, Saturated = 3, PacketLoss = 4 }
+
+public class ForceControlState
+{
+    public bool Enabled { get; set; }
+    public bool Pending { get; set; }
+    public int Algo { get; set; }
+    public bool Valid { get; set; }
+    public bool IsContact { get; set; }
+    public bool IsOverforce { get; set; }
+    public int Health { get; set; }
+    public double[] WrenchTcp { get; set; }
+    public double[] WrenchBase { get; set; }
+    public double[] DesiredWrench { get; set; }
+    public double[] TrackError { get; set; }
+    public int[] AxisMode { get; set; }
+}
+```
+
+### Initialize, Start, Stop
+
+```csharp
+Task<CommonResponse> ZeroForceCalibration(int calibrationTimeMs = 1000);
+Task<CommonResponse> InitForceControl(
+    ForceFrame frame,
+    IReadOnlyList<ForceAxisMode> axisMode,
+    object? compliance = null,
+    object? constantForce = null,
+    double[]? userFrameRpy = null,
+    double[]? desiredWrench = null,
+    object? forceLimit = null);
+Task<CommonResponse> StartForceControl();
+Task<CommonResponse> StopForceControl(int smoothTimeMs = 500);
+```
+
+`axisMode` must contain 6 axes. `ZeroForceCalibration` uses `calibrationTimeMs` as the zero-force calibration duration.
+
+### Online Tuning and Safety
+
+```csharp
+Task<CommonResponse> TuneForceParams(
+    double[]? stiffness = null,
+    double[]? damping = null,
+    double[]? mass = null,
+    double[]? desiredForce = null,
+    double[]? kp = null,
+    double[]? kd = null,
+    double? rampTime = null);
+
+Task<CommonResponse> StartContactDetection(
+    double[] direction,
+    double? feedVelocity = null,
+    double? contactForceThreshold = null,
+    double? velDropRatio = null,
+    double? maxTravel = null,
+    double? timeoutMs = null);
+
+Task<CommonResponse> SetOverforceProtection(
+    bool? enable = null,
+    double[]? forceThreshold = null,
+    double? holdMs = null);
+
+Task<CommonResponse> SetForceDataHealth(
+    bool? enable = null,
+    double? timeoutMs = null,
+    double? maxPacketLossRatio = null,
+    int? packetLossWindow = null,
+    double? forceSaturation = null,
+    double? torqueSaturation = null);
+```
+
+`direction` and `forceThreshold` are 6D arrays. `TuneForceParams` can update desired force, stiffness, damping, mass, and related parameters online.
+
+### State Reading
+
+```csharp
+Task<ForceControlState> GetForceState();
+Task<bool> GetForceStateEnabled();
+Task<bool> GetForceStatePending();
+Task<int> GetForceStateAlgo();
+Task<bool> GetForceStateValid();
+Task<bool> GetForceStateIsContact();
+Task<bool> GetForceStateIsOverforce();
+Task<int> GetForceStateHealth();
+Task<double[]> GetForceStateWrenchTcp();
+Task<double[]> GetForceStateWrenchBase();
+Task<double[]> GetForceStateDesiredWrench();
+Task<double[]> GetForceStateTrackError();
+Task<int[]> GetForceStateAxisMode();
+```
+
+Each single-field getter returns the field's concrete type. For example, `GetForceStateEnabled()` returns `bool`, and `GetForceStateWrenchTcp()` returns `double[]`.
+
+### Test Example
+
+```bash
+dotnet run --project examples/ForceControlTest/ForceControlTest.csproj -f net8.0 -- 192.168.1.136 state
+dotnet run --project examples/ForceControlTest/ForceControlTest.csproj -f net6.0 -- 192.168.1.136 constant
+dotnet run --project examples/ForceControlTest/ForceControlTest.csproj -f net8.0 -- 192.168.1.136 contact --allow-motion
+```
+
+The `net462` target is for Windows .NET Framework 4.6.2+.
+
+---
+
 ## 10. LangVersion = 10
 
 Both the SDK and net462 test projects set `<LangVersion>10</LangVersion>`. This enables C# 10 features (file-scoped namespaces, `init`, global usings, etc.) even on net462.

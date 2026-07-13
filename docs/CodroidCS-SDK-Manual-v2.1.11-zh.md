@@ -4441,6 +4441,121 @@ public string Name { get; init; } = "";
 
 ---
 
+## 力控接口（v2.1.11+）
+
+当前 C# SDK 与 Python 力控接口对齐，并同时支持 `net462`、`net6.0`、`net8.0`。`InitForceControl` 固定下发导纳算法 `algo=1`，不开放算法参数；旧 `FTSensorDriftCalibration` 已移除。
+
+### 枚举与状态类型
+
+```csharp
+public enum ForceControlAlgo { Impedance = 0, Admittance = 1, PdForce = 2 }
+public enum ForceFrame { Tcp = 0, User = 1, World = 2 }
+public enum ForceAxisMode { Position = 0, Force = 1, Compliant = 2 }
+public enum ForceHealth { Ok = 0, Invalid = 1, Timeout = 2, Saturated = 3, PacketLoss = 4 }
+
+public class ForceControlState
+{
+    public bool Enabled { get; set; }
+    public bool Pending { get; set; }
+    public int Algo { get; set; }
+    public bool Valid { get; set; }
+    public bool IsContact { get; set; }
+    public bool IsOverforce { get; set; }
+    public int Health { get; set; }
+    public double[] WrenchTcp { get; set; }
+    public double[] WrenchBase { get; set; }
+    public double[] DesiredWrench { get; set; }
+    public double[] TrackError { get; set; }
+    public int[] AxisMode { get; set; }
+}
+```
+
+### 初始化、启动与停止
+
+```csharp
+Task<CommonResponse> ZeroForceCalibration(int calibrationTimeMs = 1000);
+Task<CommonResponse> InitForceControl(
+    ForceFrame frame,
+    IReadOnlyList<ForceAxisMode> axisMode,
+    object? compliance = null,
+    object? constantForce = null,
+    double[]? userFrameRpy = null,
+    double[]? desiredWrench = null,
+    object? forceLimit = null);
+Task<CommonResponse> StartForceControl();
+Task<CommonResponse> StopForceControl(int smoothTimeMs = 500);
+```
+
+`axisMode` 必须为 6 个轴。`ZeroForceCalibration` 的 `calibrationTimeMs` 为零力校准时长。
+
+### 在线调参与安全接口
+
+```csharp
+Task<CommonResponse> TuneForceParams(
+    double[]? stiffness = null,
+    double[]? damping = null,
+    double[]? mass = null,
+    double[]? desiredForce = null,
+    double[]? kp = null,
+    double[]? kd = null,
+    double? rampTime = null);
+
+Task<CommonResponse> StartContactDetection(
+    double[] direction,
+    double? feedVelocity = null,
+    double? contactForceThreshold = null,
+    double? velDropRatio = null,
+    double? maxTravel = null,
+    double? timeoutMs = null);
+
+Task<CommonResponse> SetOverforceProtection(
+    bool? enable = null,
+    double[]? forceThreshold = null,
+    double? holdMs = null);
+
+Task<CommonResponse> SetForceDataHealth(
+    bool? enable = null,
+    double? timeoutMs = null,
+    double? maxPacketLossRatio = null,
+    int? packetLossWindow = null,
+    double? forceSaturation = null,
+    double? torqueSaturation = null);
+```
+
+`direction` 与 `forceThreshold` 均为 6 维数组。`TuneForceParams` 可在线更新期望力、刚度、阻尼、质量等参数。
+
+### 状态读取
+
+```csharp
+Task<ForceControlState> GetForceState();
+Task<bool> GetForceStateEnabled();
+Task<bool> GetForceStatePending();
+Task<int> GetForceStateAlgo();
+Task<bool> GetForceStateValid();
+Task<bool> GetForceStateIsContact();
+Task<bool> GetForceStateIsOverforce();
+Task<int> GetForceStateHealth();
+Task<double[]> GetForceStateWrenchTcp();
+Task<double[]> GetForceStateWrenchBase();
+Task<double[]> GetForceStateDesiredWrench();
+Task<double[]> GetForceStateTrackError();
+Task<int[]> GetForceStateAxisMode();
+```
+
+单字段 getter 返回对应字段类型，例如 `GetForceStateEnabled()` 返回 `bool`，`GetForceStateWrenchTcp()` 返回 `double[]`。
+
+### 测试示例
+
+```bash
+dotnet run --project examples/ForceControlTest/ForceControlTest.csproj -f net8.0 -- 192.168.1.136 state
+dotnet run --project examples/ForceControlTest/ForceControlTest.csproj -f net6.0 -- 192.168.1.136 constant
+dotnet run --project examples/ForceControlTest/ForceControlTest.csproj -f net8.0 -- 192.168.1.136 contact --allow-motion
+```
+
+`net462` 目标用于 Windows .NET Framework 4.6.2+。
+
+---
+
 ### 9. LangVersion = 10
 
 SDK 和 net462 测试项目均设置 `<LangVersion>10</LangVersion>`。这使得即使在 net462 上也能使用 C# 10 特性。
